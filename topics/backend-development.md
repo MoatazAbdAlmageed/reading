@@ -2,6 +2,7 @@
 title: تطوير الواجهة الخلفية (Backend Development)
 lang: ar
 date: 2026-06-01 13:00:00
+categories: Backend, Web Development, PHP, Laravel, Node.js
 ---
 إليك ملخص شامل ومنظم ودقيق لكافة المعلومات الواردة في المستندات المقدمة حول **تطوير الواجهة الخلفية (Backend Development)**، مصمم ليكون بديلاً كاملاً لقراءة المصادر الأصلية:
 

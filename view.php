@@ -187,6 +187,13 @@ $word_count = $topic['metadata']['word_count'];
         <span class="metadata-pill">
             <i class="fa-solid fa-globe"></i> <?php echo $lang === 'ar' ? 'العربية' : 'English'; ?>
         </span>
+        <?php if (!empty($topic['metadata']['categories'])): ?>
+            <?php foreach ($topic['metadata']['categories'] as $cat): ?>
+                <span class="metadata-pill" style="border-color: rgba(124, 158, 245, 0.4); color: var(--reading-link, #7c9ef5); font-weight: 600;">
+                    <i class="fa-solid fa-tag"></i> <?php echo htmlspecialchars($cat['name']); ?>
+                </span>
+            <?php endforeach; ?>
+        <?php endif; ?>
     </div>
 
     <!-- Rendered Markdown Container -->

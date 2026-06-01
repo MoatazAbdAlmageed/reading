@@ -3,6 +3,7 @@ exported: 2026-06-01T13:03:31.509Z
 source: NotebookLM
 type: chat
 title: "IntroductionJavaScript ES6 (ECMAScript 2015) and i..."
+categories: JavaScript, ES6, Frontend
 ---
 
 # IntroductionJavaScript ES6 (ECMAScript 2015) and i...

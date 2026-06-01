@@ -18,6 +18,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['slug'
 }
 
 $topics = get_topics();
+$categories = get_categories();
 
 // Calculate counts
 $total_count = count($topics);
@@ -51,6 +52,7 @@ foreach ($topics as $t) {
                 <p>Curate, draft, and enjoy high-fidelity reading resources in English & Arabic</p>
             </div>
             <div>
+                <a href="categories.php" class="btn btn-secondary" style="margin-right: 0.5rem;"><i class="fa-solid fa-tags"></i> Manage Categories</a>
                 <a href="editor.php" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Create New Topic</a>
             </div>
         </header>
@@ -96,6 +98,23 @@ foreach ($topics as $t) {
             </div>
         </section>
 
+        <!-- Category Filters -->
+        <?php if (!empty($categories)): ?>
+        <section class="control-bar" style="margin-top: -0.75rem; padding: 0.75rem 1.5rem; display: flex; justify-content: flex-start; align-items: center; gap: 1rem; flex-wrap: wrap;">
+            <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); display: flex; align-items: center; gap: 0.4rem; white-space: nowrap;">
+                <i class="fa-solid fa-tags"></i> Categories:
+            </span>
+            <div class="filter-wrapper" style="flex-wrap: wrap; gap: 0.4rem;">
+                <button class="filter-btn active" id="cat-filter-all" onclick="setCategoryFilter('all')">All Categories</button>
+                <?php foreach ($categories as $cat): ?>
+                    <button class="filter-btn" id="cat-filter-<?php echo $cat['slug']; ?>" onclick="setCategoryFilter('<?php echo htmlspecialchars($cat['slug']); ?>')">
+                        <?php echo htmlspecialchars($cat['name']); ?> (<?php echo $cat['topic_count']; ?>)
+                    </button>
+                <?php endforeach; ?>
+            </div>
+        </section>
+        <?php endif; ?>
+
         <!-- Topics Grid -->
         <main class="topics-grid" id="topicsContainer">
             <?php if (empty($topics)): ?>
@@ -107,7 +126,11 @@ foreach ($topics as $t) {
                 </div>
             <?php else: ?>
                 <?php foreach ($topics as $topic): ?>
-                    <article class="topic-card" data-title="<?php echo htmlspecialchars(strtolower($topic['title']), ENT_QUOTES, 'UTF-8'); ?>" data-lang="<?php echo $topic['lang']; ?>">
+                    <?php 
+                    $cat_slugs = array_column($topic['categories'], 'slug');
+                    $cat_slugs_str = implode(',', $cat_slugs);
+                    ?>
+                    <article class="topic-card" data-title="<?php echo htmlspecialchars(strtolower($topic['title']), ENT_QUOTES, 'UTF-8'); ?>" data-lang="<?php echo $topic['lang']; ?>" data-categories="<?php echo htmlspecialchars($cat_slugs_str); ?>">
                         <div class="topic-badge-wrapper">
                             <span class="badge badge-<?php echo $topic['lang']; ?>">
                                 <?php echo $topic['lang'] === 'ar' ? 'العربية' : 'English'; ?>
@@ -116,6 +139,17 @@ foreach ($topics as $t) {
                                 <i class="fa-regular fa-clock"></i> <?php echo $topic['read_time']; ?> min read
                             </span>
                         </div>
+                        
+                        <?php if (!empty($topic['categories'])): ?>
+                            <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-bottom: 0.75rem; margin-top: -0.25rem;">
+                                <?php foreach ($topic['categories'] as $cat): ?>
+                                    <span style="font-size: 0.7rem; font-weight: 600; background-color: var(--accent-glow); color: var(--accent-color); padding: 0.15rem 0.4rem; border-radius: 4px; border: 1px solid rgba(75, 110, 245, 0.2); cursor: pointer;" onclick="event.stopPropagation(); setCategoryFilter('<?php echo htmlspecialchars($cat['slug']); ?>');" title="Filter by <?php echo htmlspecialchars($cat['name']); ?>">
+                                        <?php echo htmlspecialchars($cat['name']); ?>
+                                    </span>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+
                         <h2 class="topic-title"><?php echo htmlspecialchars($topic['title']); ?></h2>
                         <div class="topic-date">
                             <i class="fa-regular fa-calendar"></i> <?php echo date('M d, Y', strtotime($topic['date'])); ?>
@@ -141,6 +175,7 @@ foreach ($topics as $t) {
     <!-- Scripting for Snappy Interaction -->
     <script>
         let currentLangFilter = 'all';
+        let currentCategoryFilter = 'all';
 
         /**
          * Delete confirmation
@@ -157,17 +192,38 @@ foreach ($topics as $t) {
         function setLanguageFilter(lang) {
             currentLangFilter = lang;
             
-            // Toggle active state in buttons
-            document.querySelectorAll('.filter-btn').forEach(btn => {
+            // Toggle active state in language buttons
+            document.querySelectorAll('[id^="filter-"]').forEach(btn => {
                 btn.classList.remove('active');
             });
-            document.getElementById(`filter-${lang}`).classList.add('active');
+            const activeBtn = document.getElementById(`filter-${lang}`);
+            if (activeBtn) {
+                activeBtn.classList.add('active');
+            }
             
             filterTopics();
         }
 
         /**
-         * Search and Language filter core logic
+         * Set current category filter
+         */
+        function setCategoryFilter(slug) {
+            currentCategoryFilter = slug;
+            
+            // Toggle active state in category buttons
+            document.querySelectorAll('[id^="cat-filter-"]').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            const activeBtn = document.getElementById(`cat-filter-${slug}`);
+            if (activeBtn) {
+                activeBtn.classList.add('active');
+            }
+            
+            filterTopics();
+        }
+
+        /**
+         * Search, Language, and Category filter core logic
          */
         function filterTopics() {
             const query = document.getElementById('searchInput').value.toLowerCase().trim();
@@ -177,11 +233,13 @@ foreach ($topics as $t) {
             cards.forEach(card => {
                 const title = card.getAttribute('data-title');
                 const lang = card.getAttribute('data-lang');
+                const categories = card.getAttribute('data-categories').split(',');
                 
                 const matchesSearch = title.includes(query);
                 const matchesLang = (currentLangFilter === 'all' || lang === currentLangFilter);
+                const matchesCategory = (currentCategoryFilter === 'all' || categories.includes(currentCategoryFilter));
                 
-                if (matchesSearch && matchesLang) {
+                if (matchesSearch && matchesLang && matchesCategory) {
                     card.style.display = 'flex';
                     visibleCount++;
                 } else {
@@ -200,7 +258,7 @@ foreach ($topics as $t) {
                     emptyState.innerHTML = `
                         <i class="fa-solid fa-magnifying-glass" style="font-size: 3rem; color: var(--text-muted); margin-bottom: 1rem; display: block;"></i>
                         <h3>No matching results</h3>
-                        <p>Try refining your search query or language filter.</p>
+                        <p>Try refining your search query, language filter, or category filter.</p>
                     `;
                     document.getElementById('topicsContainer').appendChild(emptyState);
                 }

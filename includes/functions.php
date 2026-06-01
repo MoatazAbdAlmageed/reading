@@ -48,7 +48,8 @@ function parse_topic_file($filepath) {
         'title' => ucwords(str_replace('-', ' ', $slug)),
         'lang' => 'en',
         'date' => date('Y-m-d H:i:s', filemtime($filepath)),
-        'slug' => $slug
+        'slug' => $slug,
+        'categories' => []
     ];
     
     $markdown = $content;
@@ -72,7 +73,12 @@ function parse_topic_file($filepath) {
                 if ($key === 'lang') {
                     $val = strtolower($val) === 'ar' || strtolower($val) === 'arabic' ? 'ar' : 'en';
                 }
-                $metadata[$key] = $val;
+                if ($key === 'categories') {
+                    $cats = array_map('trim', explode(',', $val));
+                    $metadata['categories'] = array_filter($cats);
+                } else {
+                    $metadata[$key] = $val;
+                }
             }
         }
     }
@@ -93,6 +99,99 @@ function parse_topic_file($filepath) {
 }
 
 /**
+ * Find or create a category by name, returning its ID
+ */
+function get_or_create_category($name) {
+    $name = trim($name);
+    if (empty($name)) {
+        return null;
+    }
+    
+    $db = Database::connect();
+    $slug = slugify($name);
+    
+    $stmt = $db->prepare("SELECT id FROM categories WHERE slug = :slug");
+    $stmt->execute([':slug' => $slug]);
+    $row = $stmt->fetch();
+    
+    if ($row) {
+        return $row['id'];
+    }
+    
+    $stmt_insert = $db->prepare("INSERT INTO categories (name, slug) VALUES (:name, :slug)");
+    $stmt_insert->execute([':name' => $name, ':slug' => $slug]);
+    return $db->lastInsertId();
+}
+
+/**
+ * Get all categories with topic counts
+ */
+function get_categories() {
+    $db = Database::connect();
+    // Count associated topics
+    $sql = "SELECT c.id, c.name, c.slug, COUNT(tc.topic_id) as topic_count 
+            FROM categories c 
+            LEFT JOIN topic_categories tc ON c.id = tc.category_id 
+            GROUP BY c.id, c.name, c.slug 
+            ORDER BY c.name ASC";
+    $stmt = $db->query($sql);
+    return $stmt->fetchAll();
+}
+
+/**
+ * Get a single category by ID
+ */
+function get_category($id) {
+    $db = Database::connect();
+    $stmt = $db->prepare("SELECT * FROM categories WHERE id = :id");
+    $stmt->execute([':id' => $id]);
+    return $stmt->fetch();
+}
+
+/**
+ * Save or update a category
+ */
+function save_category($id, $name) {
+    $name = trim($name);
+    if (empty($name)) {
+        return false;
+    }
+    $db = Database::connect();
+    $slug = slugify($name);
+    
+    if ($id) {
+        // Update
+        $stmt = $db->prepare("UPDATE categories SET name = :name, slug = :slug WHERE id = :id");
+        return $stmt->execute([':name' => $name, ':slug' => $slug, ':id' => $id]);
+    } else {
+        // Insert
+        // Check if slug exists
+        $stmt_check = $db->prepare("SELECT id FROM categories WHERE slug = :slug");
+        $stmt_check->execute([':slug' => $slug]);
+        if ($stmt_check->fetch()) {
+            return false; // Duplicate
+        }
+        $stmt = $db->prepare("INSERT INTO categories (name, slug) VALUES (:name, :slug)");
+        return $stmt->execute([':name' => $name, ':slug' => $slug]);
+    }
+}
+
+/**
+ * Delete a category
+ */
+function delete_category($id) {
+    $db = Database::connect();
+    
+    // Delete topic category relationships
+    $stmt_rel = $db->prepare("DELETE FROM topic_categories WHERE category_id = :category_id");
+    $stmt_rel->execute([':category_id' => $id]);
+    
+    // Delete category
+    $stmt = $db->prepare("DELETE FROM categories WHERE id = :id");
+    return $stmt->execute([':id' => $id]);
+}
+
+/**
  * Synchronize the database with files on disk
  * - Inserts new files into database
  * - Recreates files if they exist in database but are missing from disk
@@ -105,7 +204,7 @@ function sync_database_and_files() {
     $file_slugs = [];
     
     // 2. Fetch all database records
-    $stmt = $db->query("SELECT slug, title, lang, created_at FROM topics");
+    $stmt = $db->query("SELECT id, slug, title, lang, created_at, updated_at FROM topics");
     $db_topics = [];
     while ($row = $stmt->fetch()) {
         $db_topics[$row['slug']] = $row;
@@ -129,6 +228,51 @@ function sync_database_and_files() {
                     ':created' => $parsed['metadata']['date'] ?? date('Y-m-d H:i:s', $file_mtime),
                     ':updated' => date('Y-m-d H:i:s', $file_mtime)
                 ]);
+                $topic_id = $db->lastInsertId();
+                
+                // Add categories
+                if (!empty($parsed['metadata']['categories'])) {
+                    foreach ($parsed['metadata']['categories'] as $cat_name) {
+                        $cat_id = get_or_create_category($cat_name);
+                        if ($cat_id) {
+                            $stmt_link = $db->prepare("INSERT INTO topic_categories (topic_id, category_id) VALUES (:topic_id, :category_id)");
+                            $stmt_link->execute([':topic_id' => $topic_id, ':category_id' => $cat_id]);
+                        }
+                    }
+                }
+            }
+        } else {
+            // File exists in DB, check if it's newer than database record
+            $db_topic = $db_topics[$slug];
+            $db_updated = strtotime($db_topic['updated_at']);
+            if ($file_mtime > $db_updated + 2) {
+                $parsed = parse_topic_file($file);
+                if ($parsed) {
+                    $stmt_update = $db->prepare("UPDATE topics SET title = :title, lang = :lang, content = :content, updated_at = :updated WHERE slug = :slug");
+                    $stmt_update->execute([
+                        ':title' => $parsed['metadata']['title'],
+                        ':lang' => $parsed['metadata']['lang'],
+                        ':content' => $parsed['markdown'],
+                        ':updated' => date('Y-m-d H:i:s', $file_mtime),
+                        ':slug' => $slug
+                    ]);
+                    
+                    $topic_id = $db_topic['id'];
+                    
+                    // Sync categories
+                    $stmt_del = $db->prepare("DELETE FROM topic_categories WHERE topic_id = :topic_id");
+                    $stmt_del->execute([':topic_id' => $topic_id]);
+                    
+                    if (!empty($parsed['metadata']['categories'])) {
+                        foreach ($parsed['metadata']['categories'] as $cat_name) {
+                            $cat_id = get_or_create_category($cat_name);
+                            if ($cat_id) {
+                                $stmt_link = $db->prepare("INSERT INTO topic_categories (topic_id, category_id) VALUES (:topic_id, :category_id)");
+                                $stmt_link->execute([':topic_id' => $topic_id, ':category_id' => $cat_id]);
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -136,15 +280,28 @@ function sync_database_and_files() {
     // 3. If a record exists in DB but file doesn't exist on disk, recreate the file!
     foreach ($db_topics as $slug => $db_topic) {
         if (!in_array($slug, $file_slugs)) {
-            $stmt_content = $db->prepare("SELECT title, lang, content, created_at FROM topics WHERE slug = :slug");
+            $stmt_content = $db->prepare("SELECT id, title, lang, content, created_at FROM topics WHERE slug = :slug");
             $stmt_content->execute([':slug' => $slug]);
             $row = $stmt_content->fetch();
             if ($row) {
+                $topic_id = $row['id'];
+                
+                // Fetch categories
+                $stmt_cats = $db->prepare("SELECT c.name FROM categories c JOIN topic_categories tc ON c.id = tc.category_id WHERE tc.topic_id = :topic_id");
+                $stmt_cats->execute([':topic_id' => $topic_id]);
+                $cat_names = [];
+                while ($cat_row = $stmt_cats->fetch()) {
+                    $cat_names[] = $cat_row['name'];
+                }
+                
                 $filepath = TOPICS_DIR . '/' . $slug . '.md';
                 $file_content = "---\n";
                 $file_content .= "title: " . $row['title'] . "\n";
                 $file_content .= "lang: " . $row['lang'] . "\n";
                 $file_content .= "date: " . $row['created_at'] . "\n";
+                if (!empty($cat_names)) {
+                    $file_content .= "categories: " . implode(', ', $cat_names) . "\n";
+                }
                 $file_content .= "---\n";
                 $file_content .= $row['content'];
                 file_put_contents($filepath, $file_content);
@@ -161,7 +318,7 @@ function get_topics() {
     
     $db = Database::connect();
     // Sort by creation date descending
-    $stmt = $db->query("SELECT slug, title, lang, created_at, content FROM topics ORDER BY created_at DESC");
+    $stmt = $db->query("SELECT id, slug, title, lang, created_at, content FROM topics ORDER BY created_at DESC");
     $topics = [];
     
     while ($row = $stmt->fetch()) {
@@ -169,13 +326,20 @@ function get_topics() {
         $word_count = count(preg_split('/\s+/u', trim($clean_text)));
         $read_time = max(1, ceil($word_count / 150));
         
+        // Fetch categories for this topic
+        $stmt_cats = $db->prepare("SELECT c.id, c.name, c.slug FROM categories c JOIN topic_categories tc ON c.id = tc.category_id WHERE tc.topic_id = :topic_id");
+        $stmt_cats->execute([':topic_id' => $row['id']]);
+        $categories = $stmt_cats->fetchAll();
+        
         $topics[] = [
+            'id' => $row['id'],
             'slug' => $row['slug'],
             'title' => $row['title'],
             'lang' => $row['lang'],
             'date' => $row['created_at'],
             'word_count' => $word_count,
-            'read_time' => $read_time
+            'read_time' => $read_time,
+            'categories' => $categories
         ];
     }
     
@@ -197,14 +361,21 @@ function get_topic($slug) {
         $clean_text = strip_tags($row['content']);
         $word_count = count(preg_split('/\s+/u', trim($clean_text)));
         
+        // Fetch categories
+        $stmt_cats = $db->prepare("SELECT c.id, c.name, c.slug FROM categories c JOIN topic_categories tc ON c.id = tc.category_id WHERE tc.topic_id = :topic_id");
+        $stmt_cats->execute([':topic_id' => $row['id']]);
+        $categories = $stmt_cats->fetchAll();
+        
         return [
+            'id' => $row['id'],
             'metadata' => [
                 'title' => $row['title'],
                 'lang' => $row['lang'],
                 'date' => $row['created_at'],
                 'slug' => $row['slug'],
                 'word_count' => $word_count,
-                'read_time' => max(1, ceil($word_count / 150))
+                'read_time' => max(1, ceil($word_count / 150)),
+                'categories' => $categories
             ],
             'markdown' => $row['content']
         ];
@@ -225,7 +396,21 @@ function get_topic($slug) {
                 ':created' => $parsed['metadata']['date'],
                 ':updated' => date('Y-m-d H:i:s')
             ]);
-            return $parsed;
+            $topic_id = $db->lastInsertId();
+            
+            // Add categories
+            if (!empty($parsed['metadata']['categories'])) {
+                foreach ($parsed['metadata']['categories'] as $cat_name) {
+                    $cat_id = get_or_create_category($cat_name);
+                    if ($cat_id) {
+                        $stmt_link = $db->prepare("INSERT INTO topic_categories (topic_id, category_id) VALUES (:topic_id, :category_id)");
+                        $stmt_link->execute([':topic_id' => $topic_id, ':category_id' => $cat_id]);
+                    }
+                }
+            }
+            
+            // Refetch with categories
+            return get_topic($slug);
         }
     }
     
@@ -235,7 +420,7 @@ function get_topic($slug) {
 /**
  * Save a topic (updates filesystem and database)
  */
-function save_topic($slug, $title, $lang, $content) {
+function save_topic($slug, $title, $lang, $content, $category_ids = []) {
     $slug = basename($slug);
     $db = Database::connect();
     
@@ -251,6 +436,7 @@ function save_topic($slug, $title, $lang, $content) {
     $now = date('Y-m-d H:i:s');
     
     if ($existing) {
+        $topic_id = $existing['id'];
         // Update DB
         $stmt_update = $db->prepare("UPDATE topics SET title = :title, lang = :lang, content = :content, updated_at = :updated WHERE slug = :slug");
         $stmt_update->execute([
@@ -263,29 +449,37 @@ function save_topic($slug, $title, $lang, $content) {
         $date = $existing['created_at'];
     } else {
         // Insert DB
-        if (Database::isSQLite()) {
-            $stmt_insert = $db->prepare("INSERT INTO topics (slug, title, lang, content, created_at, updated_at) VALUES (:slug, :title, :lang, :content, :created, :updated)");
-            $stmt_insert->execute([
-                ':slug' => $slug,
-                ':title' => $title,
-                ':lang' => $lang,
-                ':content' => $content,
-                ':created' => $now,
-                ':updated' => $now
-            ]);
-        } else {
-            // MySQL auto-handles timestamp but we can set it explicitly
-            $stmt_insert = $db->prepare("INSERT INTO topics (slug, title, lang, content, created_at, updated_at) VALUES (:slug, :title, :lang, :content, :created, :updated)");
-            $stmt_insert->execute([
-                ':slug' => $slug,
-                ':title' => $title,
-                ':lang' => $lang,
-                ':content' => $content,
-                ':created' => $now,
-                ':updated' => $now
-            ]);
-        }
+        $stmt_insert = $db->prepare("INSERT INTO topics (slug, title, lang, content, created_at, updated_at) VALUES (:slug, :title, :lang, :content, :created, :updated)");
+        $stmt_insert->execute([
+            ':slug' => $slug,
+            ':title' => $title,
+            ':lang' => $lang,
+            ':content' => $content,
+            ':created' => $now,
+            ':updated' => $now
+        ]);
+        $topic_id = $db->lastInsertId();
         $date = $now;
+    }
+    
+    // Sync Category relations
+    $stmt_del = $db->prepare("DELETE FROM topic_categories WHERE topic_id = :topic_id");
+    $stmt_del->execute([':topic_id' => $topic_id]);
+    
+    $cat_names = [];
+    if (!empty($category_ids)) {
+        foreach ($category_ids as $cat_id) {
+            $stmt_add = $db->prepare("INSERT INTO topic_categories (topic_id, category_id) VALUES (:topic_id, :category_id)");
+            $stmt_add->execute([':topic_id' => $topic_id, ':category_id' => $cat_id]);
+            
+            // Get category name
+            $stmt_cat = $db->prepare("SELECT name FROM categories WHERE id = :id");
+            $stmt_cat->execute([':id' => $cat_id]);
+            $cat_row = $stmt_cat->fetch();
+            if ($cat_row) {
+                $cat_names[] = $cat_row['name'];
+            }
+        }
     }
     
     // Save to Markdown File
@@ -294,6 +488,9 @@ function save_topic($slug, $title, $lang, $content) {
     $file_content .= "title: $title\n";
     $file_content .= "lang: $lang\n";
     $file_content .= "date: $date\n";
+    if (!empty($cat_names)) {
+        $file_content .= "categories: " . implode(', ', $cat_names) . "\n";
+    }
     $file_content .= "---\n";
     $file_content .= $content;
     
@@ -306,6 +503,15 @@ function save_topic($slug, $title, $lang, $content) {
 function delete_topic($slug) {
     $slug = basename($slug);
     $db = Database::connect();
+    
+    // Get ID of topic first to delete links
+    $stmt_id = $db->prepare("SELECT id FROM topics WHERE slug = :slug");
+    $stmt_id->execute([':slug' => $slug]);
+    $row = $stmt_id->fetch();
+    if ($row) {
+        $stmt_rel = $db->prepare("DELETE FROM topic_categories WHERE topic_id = :topic_id");
+        $stmt_rel->execute([':topic_id' => $row['id']]);
+    }
     
     // Delete from DB
     $stmt = $db->prepare("DELETE FROM topics WHERE slug = :slug");

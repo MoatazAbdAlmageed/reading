@@ -10,6 +10,10 @@ $slug = '';
 $title = '';
 $lang = 'en';
 $content = '';
+$topic_category_ids = [];
+
+// Fetch all categories for selection
+$categories = get_categories();
 
 // Load existing topic if editing
 if (isset($_GET['slug'])) {
@@ -20,6 +24,11 @@ if (isset($_GET['slug'])) {
         $title = $topic['metadata']['title'];
         $lang = $topic['metadata']['lang'];
         $content = $topic['markdown'];
+        
+        // Extract array of category IDs
+        if (!empty($topic['metadata']['categories'])) {
+            $topic_category_ids = array_column($topic['metadata']['categories'], 'id');
+        }
     }
 }
 
@@ -29,6 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title = trim($_POST['title'] ?? '');
     $lang = $_POST['lang'] ?? 'en';
     $content = trim($_POST['content'] ?? '');
+    $category_ids = isset($_POST['categories']) ? array_map('intval', $_POST['categories']) : [];
     
     if (empty($title)) {
         $error = 'Topic title is required.';
@@ -62,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
         
-        if (save_topic($target_slug, $title, $lang, $content)) {
+        if (save_topic($target_slug, $title, $lang, $content, $category_ids)) {
             header("Location: index.php?saved=1");
             exit;
         } else {
@@ -79,6 +89,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>Knowledge Reader — <?php echo $is_edit ? 'Edit Topic' : 'Create Topic'; ?></title>
     <link rel="stylesheet" href="./assets/dashboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .category-pills-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .category-pill-label {
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .category-pill-label input[type="checkbox"] {
+            display: none;
+        }
+
+        .category-pill-label span {
+            display: inline-block;
+            padding: 0.4rem 0.8rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border-radius: 20px;
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            user-select: none;
+            transition: all 0.2s;
+        }
+
+        .category-pill-label input[type="checkbox"]:checked + span {
+            background-color: var(--accent-glow);
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+            box-shadow: 0 0 10px rgba(75, 110, 245, 0.2);
+        }
+
+        .category-pill-label:hover span {
+            border-color: var(--text-secondary);
+            background-color: var(--bg-surface-hover);
+        }
+    </style>
 </head>
 <body class="dashboard-body">
     <div class="container">
@@ -118,6 +171,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <option value="ar" <?php echo $lang === 'ar' ? 'selected' : ''; ?>>العربية (RTL)</option>
                             </select>
                         </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 1.5rem;">
+                        <label style="display: flex; justify-content: space-between; align-items: center;">
+                            <span><i class="fa-solid fa-tags"></i> Topic Categories</span>
+                            <a href="categories.php" target="_blank" style="font-size: 0.8rem; color: var(--accent-color); text-decoration: none; font-weight: normal;"><i class="fa-solid fa-gear"></i> Manage Categories</a>
+                        </label>
+                        <?php if (empty($categories)): ?>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">
+                                No categories defined yet. <a href="categories.php" style="color: var(--accent-color); text-decoration: underline;">Create categories first</a> to organize your topics.
+                            </p>
+                        <?php else: ?>
+                            <div class="category-pills-selector">
+                                <?php foreach ($categories as $cat): ?>
+                                    <label class="category-pill-label">
+                                        <input type="checkbox" name="categories[]" value="<?php echo $cat['id']; ?>" 
+                                            <?php echo in_array($cat['id'], $topic_category_ids) ? 'checked' : ''; ?>>
+                                        <span><?php echo htmlspecialchars($cat['name']); ?></span>
+                                    </label>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
                     </div>
 
                     <label for="markdownEditor" style="display: flex; justify-content: space-between;">

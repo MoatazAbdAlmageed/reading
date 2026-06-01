@@ -91,6 +91,22 @@ class Database {
             `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
         $pdo->exec($sql);
+
+        $sql_cats = "CREATE TABLE IF NOT EXISTS `categories` (
+            `id` INT AUTO_INCREMENT PRIMARY KEY,
+            `name` VARCHAR(255) NOT NULL UNIQUE,
+            `slug` VARCHAR(255) NOT NULL UNIQUE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
+        $pdo->exec($sql_cats);
+
+        $sql_topic_cats = "CREATE TABLE IF NOT EXISTS `topic_categories` (
+            `topic_id` INT NOT NULL,
+            `category_id` INT NOT NULL,
+            PRIMARY KEY (`topic_id`, `category_id`),
+            FOREIGN KEY (`topic_id`) REFERENCES `topics` (`id`) ON DELETE CASCADE,
+            FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
+        $pdo->exec($sql_topic_cats);
     }
 
     /**
@@ -107,5 +123,21 @@ class Database {
             `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP
         );";
         $pdo->exec($sql);
+
+        $sql_cats = "CREATE TABLE IF NOT EXISTS `categories` (
+            `id` INTEGER PRIMARY KEY AUTOINCREMENT,
+            `name` VARCHAR(255) NOT NULL UNIQUE,
+            `slug` VARCHAR(255) NOT NULL UNIQUE
+        );";
+        $pdo->exec($sql_cats);
+
+        $sql_topic_cats = "CREATE TABLE IF NOT EXISTS `topic_categories` (
+            `topic_id` INTEGER NOT NULL,
+            `category_id` INTEGER NOT NULL,
+            PRIMARY KEY (`topic_id`, `category_id`),
+            FOREIGN KEY (`topic_id`) REFERENCES `topics` (`id`) ON DELETE CASCADE,
+            FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE CASCADE
+        );";
+        $pdo->exec($sql_topic_cats);
     }
 }
