@@ -1,0 +1,319 @@
+/* ============================================================
+   Reading Stylesheet — Dark Mode
+   Usage: <link rel="stylesheet" href="reading-dark.css">
+   Or add class="reading" to your <body> or any container
+   ============================================================ */
+
+/* ── Custom Properties ─────────────────────────────────────── */
+:root {
+  --reading-bg: #2c2c2a;
+  --reading-surface: #181c27;
+  --reading-border: #2a2f3e;
+
+  --reading-text: #d4d8e8;
+  --reading-text-muted: #7a8099;
+  --reading-text-heading: #eaedf7;
+  --reading-text-accent: #7c9ef5;
+  --reading-text-quote: #a3aac5;
+
+  --reading-link: #7c9ef5;
+  --reading-link-hover: #a8bfff;
+  --reading-selection-bg: #2d3a5e;
+  --reading-selection-fg: #eaedf7;
+
+  --reading-code-bg: #1e2233;
+  --reading-code-text: #a8d5a2;
+
+  --reading-font-body:
+    "Amiri", "Scheherazade New", "Noto Serif Arabic", Georgia, serif;
+  --reading-font-mono: "Fira Code", "Cascadia Code", monospace;
+
+  --reading-size: 2.125rem;
+  --reading-line-height: 1.95;
+  --reading-max-width: 70ch;
+  --reading-spacing: 1.75rem;
+}
+
+/* ── Reset & Box Model ──────────────────────────────────────── */
+body *,
+body *::before,
+body *::after {
+  box-sizing: border-box;
+}
+
+/* ── Container ──────────────────────────────────────────────── */
+body {
+  unicode-bidi: embed;
+
+  background-color: var(--reading-bg);
+  color: var(--reading-text);
+
+  font-family: var(--reading-font-body);
+  font-size: var(--reading-size);
+  line-height: var(--reading-line-height);
+  font-weight: 400;
+
+  max-width: var(--reading-max-width);
+  margin-inline: auto;
+  padding: 1.5rem;
+  margin: 1.5rem;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings:
+    "kern" 1,
+    "liga" 1;
+}
+
+/* ── Selection ──────────────────────────────────────────────── */
+body ::selection {
+  background-color: var(--reading-selection-bg);
+  color: var(--reading-selection-fg);
+}
+
+/* ── Headings ───────────────────────────────────────────────── */
+body h1,
+body h2,
+body h3,
+body h4,
+body h5,
+body h6 {
+  padding: 10px;
+  color: var(--reading-bg);
+  background-color: var(--reading-code-text);
+  font-weight: 700;
+  line-height: 1.4;
+  margin-block: var(--reading-spacing) 0.6rem;
+  letter-spacing: -0.01em;
+}
+
+body h1 {
+  font-size: 3rem;
+}
+body h2 {
+  font-size: 2.55rem;
+  padding: 20px;
+}
+body h3 {
+  font-size: 2.25rem;
+}
+body h4 {
+  font-size: 2rem;
+}
+body h5,
+body h6 {
+  font-size: 1.9rem;
+  color: var(--reading-text-muted);
+}
+
+/* ── Paragraphs & Spacing ───────────────────────────────────── */
+body p {
+  margin-block: 0 var(--reading-spacing);
+  word-spacing: 0.04em;
+}
+
+/* ── Links ──────────────────────────────────────────────────── */
+body a {
+  color: var(--reading-link);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(
+    in srgb,
+    var(--reading-link) 40%,
+    transparent
+  );
+  transition:
+    color 0.2s,
+    text-decoration-color 0.2s;
+}
+
+body a:hover {
+  color: var(--reading-link-hover);
+  text-decoration-color: var(--reading-link-hover);
+}
+
+/* ── Blockquote ─────────────────────────────────────────────── */
+body blockquote {
+  margin-inline: 0;
+  margin-block: var(--reading-spacing);
+  padding-inline: 1.5rem 0;
+  padding-block: 0.25rem;
+
+  border-inline-start: none;
+  border-inline-end: 3px solid var(--reading-text-accent);
+
+  color: var(--reading-text-quote);
+  font-style: italic;
+  font-size: 1.05em;
+}
+
+/* ── Horizontal Rule ────────────────────────────────────────── */
+body hr {
+  border: none;
+  border-top: 1px solid var(--reading-border);
+  margin-block: calc(var(--reading-spacing) * 1.5);
+}
+
+/* ── Lists ──────────────────────────────────────────────────── */
+body ul,
+body ol {
+  padding-inline-start: 0;
+  padding-inline-end: 1.75rem;
+  margin-block: 0 var(--reading-spacing);
+}
+
+body li {
+  margin-block-end: 0.4rem;
+}
+
+body li::marker {
+  color: var(--reading-text-accent);
+}
+
+/* ── Inline Code ────────────────────────────────────────────── */
+body code {
+  font-family: var(--reading-font-mono);
+  font-size: 0.85em;
+  background-color: var(--reading-code-bg);
+  color: var(--reading-code-text);
+  padding: 0.15em 0.45em;
+  border-radius: 4px;
+
+  unicode-bidi: bidi-override;
+}
+
+/* ── Code Block ─────────────────────────────────────────────── */
+body pre {
+  background-color: var(--reading-code-bg);
+  border: 1px solid var(--reading-border);
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  margin-block: var(--reading-spacing);
+  overflow-x: auto;
+
+  unicode-bidi: embed;
+  text-align: left;
+}
+
+body pre code {
+  background: none;
+  padding: 0;
+  font-size: 0.88rem;
+  line-height: 1.7;
+}
+
+/* ── Table ──────────────────────────────────────────────────── */
+body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-block: var(--reading-spacing);
+  font-size: 0.95em;
+}
+
+body th {
+  background-color: var(--reading-surface);
+  color: var(--reading-text-heading);
+  font-weight: 600;
+
+  padding: 0.6rem 1rem;
+  border-bottom: 2px solid var(--reading-border);
+}
+
+body td {
+  padding: 0.55rem 1rem;
+  border-bottom: 1px solid var(--reading-border);
+}
+
+body tbody tr:hover {
+  background-color: var(--reading-surface);
+}
+
+/* ── Images & Media ─────────────────────────────────────────── */
+body img,
+body video,
+body iframe {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  display: block;
+  margin-block: var(--reading-spacing);
+}
+
+body figure {
+  margin-inline: 0;
+  margin-block: var(--reading-spacing);
+}
+
+body figcaption {
+  font-size: 0.82rem;
+  color: var(--reading-text-muted);
+  margin-top: 0.5rem;
+  text-align: center;
+}
+
+/* ── Mark / Highlight ───────────────────────────────────────── */
+body mark {
+  background-color: #3a3010;
+  color: #f5d97a;
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+}
+
+/* ── Abbreviation ───────────────────────────────────────────── */
+body abbr[title] {
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: help;
+}
+
+/* ── Scrollbar ──────────────────────────────────────────────── */
+body {
+  scrollbar-color: var(--reading-border) var(--reading-bg);
+  scrollbar-width: thin;
+}
+
+body::-webkit-scrollbar {
+  width: 6px;
+}
+body::-webkit-scrollbar-track {
+  background: var(--reading-bg);
+}
+body::-webkit-scrollbar-thumb {
+  background: var(--reading-border);
+  border-radius: 3px;
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  body {
+    --reading-size: 1rem;
+    --reading-line-height: 1.85;
+    padding: 2rem 1rem;
+  }
+
+  body h1 {
+    font-size: 1.6rem;
+  }
+  body h2 {
+    font-size: 1.3rem;
+  }
+}
+
+/* ── Print ──────────────────────────────────────────────────── */
+@media print {
+  body {
+    background: #fff;
+    color: #111;
+    font-size: 11pt;
+    max-width: none;
+  }
+
+  body a {
+    color: #000;
+    text-decoration: underline;
+  }
+  body code,
+  body pre {
+    border: 1px solid #ccc;
+  }
+}

@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JSON Web Token</title>
+    <link rel="stylesheet" href="./assets/style.css" />
+  </head>
+  <body>
+    <p>
+      <strong>JSON Web Token (JWT)</strong>, pronounced &quot;jot,&quot; is an
+      open standard (RFC 7519) that defines a compact, self-contained, and
+      URL-safe method for securely transmitting information between two parties
+      as a JSON object. It is widely used in modern web applications and APIs
+      for authentication, authorization, and secure information exchange.
+    </p>
+    <h3 id="-structure-of-a-jwt">🧱 Structure of a JWT</h3>
+    <p>
+      A JWT consists of three parts separated by dots (<code>.</code>), which
+      are Base64Url encoded. The structure looks like this:
+      <code>header.payload.signature</code>.
+    </p>
+    <ol>
+      <li>
+        <strong>Header</strong>: Contains metadata about the token. It typically
+        specifies the token type (<code>typ</code>, usually &quot;JWT&quot;) and
+        the cryptographic algorithm (<code>alg</code>) used to sign the token,
+        such as HMAC SHA-256 (HS256) or RSA (RS256).
+      </li>
+      <li>
+        <strong>Payload (Claims)</strong>: Contains the actual data being
+        transmitted, which are called &quot;claims&quot;. Claims are statements
+        about an entity (like a user) and can be:
+        <ul>
+          <li>
+            <strong>Registered Claims</strong>: Standardized and recommended
+            fields like <code>iss</code> (issuer), <code>sub</code> (subject),
+            <code>aud</code> (audience), and <code>exp</code> (expiration time).
+          </li>
+          <li>
+            <strong>Public Claims</strong>: Custom claims that should be defined
+            in the IANA registry or as collision-resistant URIs.
+          </li>
+          <li>
+            <strong>Private Claims</strong>: Custom data agreed upon by the
+            specific parties exchanging the token, such as user roles.
+          </li>
+        </ul>
+      </li>
+      <li>
+        <strong>Signature</strong>: Created by taking the encoded header,
+        encoded payload, and a secret or private key, and passing them through
+        the algorithm specified in the header. The signature verifies that the
+        sender is who they claim to be and ensures the token&#39;s data has not
+        been tampered with in transit.
+      </li>
+    </ol>
+    <h3 id="-how-jwt-authentication-works">🔄 How JWT Authentication Works</h3>
+    <ol>
+      <li>
+        <strong>Login</strong>: A user submits their credentials (e.g., username
+        and password) to the server.
+      </li>
+      <li>
+        <strong>Token Issuance</strong>: Once verified, the server generates a
+        JWT containing the user&#39;s information, signs it, and sends it back
+        to the client.
+      </li>
+      <li>
+        <strong>Storage and Transmission</strong>: The client stores the JWT
+        (preferably in an HttpOnly cookie or secure storage) and attaches it to
+        the <code>Authorization</code> header using the
+        <code>Bearer</code> schema (<code
+          >Authorization: Bearer &lt;token&gt;</code
+        >) for subsequent requests to the server.
+      </li>
+      <li>
+        <strong>Verification</strong>: The server decodes the JWT and validates
+        the signature and claims (like expiration). If valid, the server grants
+        access to the requested resources.
+      </li>
+    </ol>
+    <h3 id="-key-benefits">💡 Key Benefits</h3>
+    <ul>
+      <li>
+        <strong>Stateless and Scalable</strong>: Because the JWT contains all
+        the necessary information, the server does not need to query a database
+        or maintain session states in memory to authenticate a user. This makes
+        scaling highly efficient.
+      </li>
+      <li>
+        <strong>Compact</strong>: Due to its small size, a JWT can easily be
+        passed via URLs, POST parameters, or HTTP headers.
+      </li>
+      <li>
+        <strong>Cross-Domain Support</strong>: JWTs are easily shared and
+        verified across different services and domains, making them ideal for
+        Single Sign-On (SSO) systems and microservice architectures.
+      </li>
+    </ul>
+    <h3 id="-security-best-practices">🛡️ Security Best Practices</h3>
+    <p>
+      While JWTs are highly secure when implemented correctly, their flexibility
+      requires developers to adhere to strict security practices:
+    </p>
+    <ul>
+      <li>
+        <strong>Do Not Store Sensitive Data</strong>: The payload of a standard
+        JWT is only encoded, <em>not encrypted</em>. Anyone who intercepts the
+        token can read its contents. Never store sensitive information like
+        passwords or financial data in the payload.
+      </li>
+      <li>
+        <strong>Keep Expiration Times Short</strong>: Because stateless JWTs are
+        difficult to revoke once issued, they should be given a short expiration
+        time (<code>exp</code>) to limit the window an attacker has if a token
+        is stolen. They are often paired with a &quot;refresh token&quot; to
+        silently maintain user sessions.
+      </li>
+      <li>
+        <strong>Always Verify the Signature and Algorithm</strong>: You must
+        definitively verify the signature and explicitly check that the
+        algorithm (<code>alg</code>) used matches what your application expects.
+        This prevents &quot;algorithm confusion&quot; or attacks where a
+        malicious user changes the algorithm to <code>none</code> to bypass
+        signature checks.
+      </li>
+      <li>
+        <strong>Use HTTPS</strong>: JWTs must always be transmitted over
+        HTTPS/TLS to prevent attackers from intercepting the token via
+        man-in-the-middle attacks.
+      </li>
+    </ul>
+  </body>
+</html>

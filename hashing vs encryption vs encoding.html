@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="./assets/style.css" />
+    <link rel="stylesheet" href="./assets/rtl.css" />
+  </head>
+  <body>
+    <h2 id="-encoding-hashing-encryption-">
+      الدليل الشامل لفهم واستخدام الترميز (Encoding)، التجزئة (Hashing)،
+      والتشفير (Encryption)
+    </h2>
+    <p>
+      يعتبر حماية البيانات ركيزة أساسية في الأمن السيبراني الحديث، خاصة مع تزايد
+      وتيرة وخطورة خروقات البيانات التي طالت شركات كبرى مثل (LinkedIn،
+      Microsoft، Meta). يعتمد تأمين البيانات على ثلاث تقنيات أساسية يتم الخلط
+      بينها غالباً، وهي: التشفير، التجزئة، والترميز.
+    </p>
+    <hr />
+    <h3 id="1-encoding-">1. الترميز (Encoding)</h3>
+    <p>
+      الترميز هو عملية تحويل البيانات من تنسيق إلى آخر لضمان توافقها وقابليتها
+      للاستخدام عبر أنظمة وتطبيقات مختلفة.
+    </p>
+    <ul>
+      <li>
+        <strong>الهدف الأساسي:</strong> ضمان
+        <strong>سهولة الاستخدام (Usability)</strong> وقابلية التشغيل البيني
+        (Interoperability) بين الأنظمة.
+      </li>
+      <li>
+        <strong>الآلية:</strong> لا يعتمد الترميز على &quot;مفاتيح&quot; سرية،
+        بل يستخدم خوارزميات وجداول تحويل علنية ومعروفة. وهي عملية
+        <strong>قابلة للعكس بسهولة (Reversible)</strong>؛ حيث يمكن لأي شخص يمتلك
+        الخوارزمية إعادة البيانات إلى شكلها الأصلي.
+      </li>
+      <li>
+        <strong>مستوى الأمان:</strong> <strong>معدوم</strong>. لا يُستخدم
+        الترميز لأغراض أمنية أو لإخفاء البيانات.
+      </li>
+      <li>
+        <strong>أمثلة الخوارزميات:</strong>
+        <ul>
+          <li>
+            <code>Base64</code>: لتحويل البيانات الثنائية (مثل الصور أو
+            المرفقات) إلى نصوص لتسهيل إرسالها عبر البريد الإلكتروني أو في رموز
+            (JWT).
+          </li>
+          <li>
+            <code>ASCII</code> و <code>Unicode</code>: لتحويل النصوص البشرية إلى
+            صيغ يفهمها الحاسوب.
+          </li>
+          <li>
+            <code>URL Encoding</code>: للتعامل مع الروابط التي تحتوي على رموز
+            غير مدعومة.
+          </li>
+        </ul>
+      </li>
+    </ul>
+    <hr />
+    <h3 id="2-hashing-">2. التجزئة (Hashing)</h3>
+    <p>
+      التجزئة هي خوارزمية رياضية تأخذ بيانات مدخلة بأي حجم، وتحولها إلى سلسلة
+      نصية فريدة ذات <strong>طول ثابت (Fixed-length)</strong> تسمى &quot;البصمة
+      الرقمية&quot; أو (Hash).
+    </p>
+    <ul>
+      <li>
+        <strong>الهدف الأساسي:</strong> ضمان
+        <strong>سلامة البيانات (Data Integrity)</strong> والتحقق من هويتها دون
+        كشف محتواها الأصلي.
+      </li>
+      <li>
+        <strong>الآلية:</strong> عملية
+        <strong>غير قابلة للعكس (One-way/Irreversible)</strong>؛ من المستحيل
+        تقريباً استعادة النص الأصلي من خلال المخرجات (الـ Hash).
+      </li>
+      <li>
+        <strong>تأثير الانهيار الجليدي (Avalanche Effect):</strong> أي تغيير
+        طفيف في المدخلات (حتى لو كان حرفاً واحداً) سيؤدي إلى تغيير المخرجات (الـ
+        Hash) بشكل جذري وكامل.
+      </li>
+      <li>
+        <strong>منهجية تأمين كلمات المرور (Salting):</strong> لحماية كلمات
+        المرور من هجمات القوة العمياء (Brute-force) وقواميس الاختراق (Dictionary
+        attacks)، يتم إضافة قيمة عشوائية تسمى (Salt) لكل كلمة مرور قبل تجزئتها،
+        مما يجعل اختراقها بطيئاً وشبه مستحيل.
+      </li>
+      <li>
+        <strong>أمثلة الخوارزميات:</strong>
+        <ul>
+          <li>
+            <em>خوارزميات سريعة (للتحقق من الملفات):</em>
+            <code>MD5</code> (قديمة وضعيفة)، و عائلة <code>SHA</code> مثل
+            <code>SHA-256</code>.
+          </li>
+          <li>
+            <em>خوارزميات بطيئة (مخصصة لكلمات المرور):</em> <code>Bcrypt</code>,
+            <code>PBKDF2</code>, <code>SCrypt</code> (البطء هنا ميزة أمنية
+            لتصعيب الاختراق).
+          </li>
+        </ul>
+      </li>
+      <li>
+        <strong>حالات الاستخدام:</strong> تخزين كلمات المرور، الشهادات الرقمية
+        (SSL)، التحقق من عدم التلاعب بالملفات أثناء النقل، والبحث السريع في
+        قواعد البيانات.
+      </li>
+    </ul>
+    <hr />
+    <h3 id="3-encryption-">3. التشفير (Encryption)</h3>
+    <p>
+      التشفير هو عملية خلط البيانات وتغيير شكلها لتصبح غير مقروءة (Ciphertext)،
+      بحيث لا يمكن قراءتها إلا من قبل الأشخاص المصرح لهم.
+    </p>
+    <ul>
+      <li>
+        <strong>الهدف الأساسي:</strong> ضمان
+        <strong>السرية (Confidentiality)</strong> وحماية البيانات من الوصول غير
+        المصرح به.
+      </li>
+      <li>
+        <strong>الآلية:</strong> عملية
+        <strong>قابلة للعكس (Reversible)</strong>، ولكن <em>فقط</em> لمن يمتلك
+        &quot;المفتاح&quot; السري الصحيح (Key) لفك التشفير.
+      </li>
+      <li>
+        <strong>أنواع التشفير:</strong>
+        <ol>
+          <li>
+            <strong>التشفير المتماثل (Symmetric):</strong> يستخدم
+            <strong>مفتاحاً واحداً</strong> للتشفير وفك التشفير. يتميز بالسرعة
+            ومناسب للبيانات الضخمة، لكنه يعاني من خطورة سرقة المفتاح أثناء
+            مشاركته. (مثل: <code>AES</code>, <code>DES</code>,
+            <code>Blowfish</code>).
+          </li>
+          <li>
+            <strong>التشفير غير المتماثل (Asymmetric):</strong> يستخدم
+            <strong>مفتاحين مختلفين</strong> (مفتاح عام للتشفير، ومفتاح خاص لفك
+            التشفير). أبطأ ولكنه أكثر أماناً لعدم الحاجة لمشاركة المفتاح الخاص.
+            (مثل: <code>RSA</code>, <code>ECC</code>).
+          </li>
+        </ol>
+      </li>
+      <li>
+        <strong>المنهجية المدمجة (Hybrid):</strong> تستخدم اتصالات (SSL/TLS)
+        التشفير غير المتماثل في البداية لتبادل مفتاح الجلسة بأمان، ثم تنتقل
+        للتشفير المتماثل لنقل البيانات بسرعة.
+      </li>
+    </ul>
+    <hr />
+    <h3 id="4-">4. مفاهيم أمنية إضافية (وردت في المستند)</h3>
+    <ul>
+      <li>
+        <strong>التشويش (Obfuscation):</strong> تعقيد الشيفرة البرمجية لجعل
+        فهمها صعباً على البشر (لمنع الهندسة العكسية وسرقة الملكية الفكرية)، مع
+        بقائها قابلة للقراءة بواسطة الحواسيب. وهو مجرد عائق وليس حماية قوية
+        كالتشفير.
+      </li>
+      <li>
+        <strong>التوقيع الرقمي (Digital Signing):</strong> يستخدم المفتاح الخاص
+        لإثبات &quot;الموثوقية&quot; (Authenticity) وعدم التلاعب بالرسالة، مما
+        يضمن مبدأ &quot;عدم التنصل&quot; (Non-repudiation) (مثل:
+        <code>FIDO2</code>).
+      </li>
+      <li>
+        <strong>رموز مصادقة الرسائل (MACs):</strong> تشبه التوقيع الرقمي ولكنها
+        تستخدم مفتاحاً مشتركاً سرياً للتحقق من الموثوقية والسلامة، إلا أنها لا
+        توفر ميزة &quot;عدم التنصل&quot;.
+      </li>
+    </ul>
+    <hr />
+    <h3 id="5-framework-comparison-">
+      5. مقارنة هيكلية سريعة (Framework Comparison)
+    </h3>
+    <table>
+      <thead>
+        <tr>
+          <th style="text-align: left">الميزة</th>
+          <th style="text-align: left">الترميز (Encoding)</th>
+          <th style="text-align: left">التجزئة (Hashing)</th>
+          <th style="text-align: left">التشفير (Encryption)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="text-align: left"><strong>الهدف (Goal)</strong></td>
+          <td style="text-align: left">قابلية الاستخدام (Usability)</td>
+          <td style="text-align: left">سلامة البيانات (Integrity)</td>
+          <td style="text-align: left">سرية البيانات (Confidentiality)</td>
+        </tr>
+        <tr>
+          <td style="text-align: left"><strong>القابلية للعكس</strong></td>
+          <td style="text-align: left">نعم (بسهولة)</td>
+          <td style="text-align: left">لا (مستحيل تقريباً)</td>
+          <td style="text-align: left">نعم (بشرط وجود المفتاح)</td>
+        </tr>
+        <tr>
+          <td style="text-align: left"><strong>استخدام المفاتيح</strong></td>
+          <td style="text-align: left">لا يوجد</td>
+          <td style="text-align: left">لا يوجد (قد يستخدم Salt)</td>
+          <td style="text-align: left">نعم (متماثل أو غير متماثل)</td>
+        </tr>
+        <tr>
+          <td style="text-align: left"><strong>الأمان (Security)</strong></td>
+          <td style="text-align: left">غير مخصص للأمان</td>
+          <td style="text-align: left">يمنع التلاعب والمحاكاة</td>
+          <td style="text-align: left">يمنع القراءة والاستراق</td>
+        </tr>
+      </tbody>
+    </table>
+    <hr />
+    <h3 id="6-insights-best-practices-">
+      6. أهم الرؤى وأفضل الممارسات (Insights &amp; Best Practices)
+    </h3>
+    <ol>
+      <li>
+        <strong>اختر الأداة الصحيحة للهدف الصحيح:</strong> استخدام طريقة خاطئة
+        قد يؤدي إلى كوارث أمنية وفضائح علاقات عامة (كما حدث لشركة Adobe عندما
+        ادعت &quot;تشفير&quot; كلمات المرور بدلاً من &quot;تجزئتها&quot;، مما
+        أدى لفهم خاطئ لحجم الكارثة).
+      </li>
+      <li>
+        <strong>لا تُشفر كلمات المرور (Never Encrypt Passwords):</strong> لأن
+        التشفير قابل للعكس؛ إذا تم تسريب المفتاح، ستكشف جميع كلمات المرور.
+        استخدم دائماً <strong>التجزئة (Hashing)</strong> مع
+        <strong>التمليح (Salting)</strong> واستخدم خوارزميات بطيئة مثل
+        <code>Bcrypt</code>.
+      </li>
+      <li>
+        <strong>الترميز ليس حماية:</strong> لا تقم بترميز بيانات حساسة (مثل
+        Base64) وتفترض أنها محمية، لأن أي شخص يمكنه عكسها فوراً.
+      </li>
+      <li>
+        <strong>تحديث الخوارزميات (Actionable Takeaway):</strong> توقف عن
+        استخدام الخوارزميات المتقادمة والتي أثبتت ضعفها (مثل <code>MD5</code> و
+        <code>DES</code>). استخدم المعايير الصناعية الحديثة مثل
+        <code>AES-256</code> للتشفير، و <code>SHA-256/512</code> للتجزئة
+        السريعة.
+      </li>
+      <li>
+        <strong>تأمين المفاتيح (Key Management):</strong> قوة التشفير تعتمد
+        كلياً على سرية المفتاح. يجب استخدام حلول متقدمة مثل (HSMs) لتخزين
+        المفاتيح.
+      </li>
+      <li>
+        <strong>تدريب الفِرق التقنية والإعلامية:</strong> التأكد من فهم الفرق
+        التام بين هذه المصطلحات لضمان بناء معمارية أمنية سليمة، وللتواصل الدقيق
+        عند حدوث خروقات للبيانات.
+      </li>
+    </ol>
+  </body>
+</html>
