@@ -153,6 +153,13 @@ $word_count = $topic['metadata']['word_count'];
     <!-- Immersive Reading Progress Bar -->
     <div id="progress-bar" class="no-print"></div>
 
+    <!-- Toast Notification for Progress Recovery -->
+    <div id="toast-notification" class="no-print" style="position: fixed; bottom: 2rem; right: 2rem; background-color: var(--reading-surface, #181c27); border: 1px solid var(--reading-text-accent, #7c9ef5); color: var(--reading-text, #d4d8e8); padding: 0.75rem 1.25rem; border-radius: 8px; font-family: 'Outfit', sans-serif; font-size: 0.9rem; display: flex; align-items: center; gap: 0.75rem; box-shadow: 0 10px 25px rgba(0,0,0,0.3); transform: translateY(150%); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 10000;">
+        <i class="fa-solid fa-circle-check" style="color: var(--reading-text-accent, #7c9ef5);"></i>
+        <span id="toast-message">Resumed progress</span>
+        <button onclick="resetProgress()" style="background: none; border: none; color: var(--reading-link, #7c9ef5); cursor: pointer; text-decoration: underline; font-family: inherit; font-size: 0.85rem; margin-left: 0.5rem; padding: 0; font-weight: 600;">Restart</button>
+    </div>
+
     <!-- Reader Header Toolbar -->
     <div class="reader-header no-print">
         <div>
@@ -215,6 +222,8 @@ $word_count = $topic['metadata']['word_count'];
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js"></script>
 
     <script>
+        const slug = <?php echo json_encode($slug); ?>;
+        
         // Inject safely escaped raw markdown from PHP directly into JS
         const rawMarkdown = <?php echo json_encode($topic['markdown']); ?>;
         
@@ -230,14 +239,63 @@ $word_count = $topic['metadata']['word_count'];
         Prism.highlightAll();
 
         /**
-         * Reading Progress Indicator script
+         * Reading Progress Indicator and Storage script
          */
+        let isScrolling;
         window.addEventListener('scroll', () => {
             const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
             const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-            const scrolled = (winScroll / height) * 100;
+            const scrolled = height > 0 ? (winScroll / height) * 100 : 0;
+            
             document.getElementById('progress-bar').style.width = scrolled + '%';
+            
+            // Debounce saving progress to localStorage
+            window.clearTimeout(isScrolling);
+            isScrolling = setTimeout(() => {
+                localStorage.setItem('reading_progress_' + slug, scrolled.toFixed(1));
+            }, 100);
         });
+
+        // Restore saved reading progress
+        window.addEventListener('load', () => {
+            const savedProgress = localStorage.getItem('reading_progress_' + slug);
+            if (savedProgress) {
+                const progress = parseFloat(savedProgress);
+                if (progress > 1 && progress < 99) { // Only restore if significant progress and not completed
+                    // Wait for fonts & rendering
+                    setTimeout(() => {
+                        const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+                        const targetScroll = (progress / 100) * scrollHeight;
+                        window.scrollTo({
+                            top: targetScroll,
+                            behavior: 'smooth'
+                        });
+                        
+                        showToast(`Resumed from ${Math.round(progress)}% progress`);
+                    }, 300);
+                }
+            }
+        });
+
+        function showToast(message) {
+            const toast = document.getElementById('toast-notification');
+            document.getElementById('toast-message').textContent = message;
+            toast.style.transform = 'translateY(0)';
+            
+            // Auto-hide after 4 seconds
+            setTimeout(() => {
+                toast.style.transform = 'translateY(150%)';
+            }, 4000);
+        }
+
+        function resetProgress() {
+            localStorage.removeItem('reading_progress_' + slug);
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+            document.getElementById('toast-notification').style.transform = 'translateY(150%)';
+        }
     </script>
 </body>
 </html>

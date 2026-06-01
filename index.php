@@ -130,7 +130,7 @@ foreach ($topics as $t) {
                     $cat_slugs = array_column($topic['categories'], 'slug');
                     $cat_slugs_str = implode(',', $cat_slugs);
                     ?>
-                    <article class="topic-card" data-title="<?php echo htmlspecialchars(strtolower($topic['title']), ENT_QUOTES, 'UTF-8'); ?>" data-lang="<?php echo $topic['lang']; ?>" data-categories="<?php echo htmlspecialchars($cat_slugs_str); ?>">
+                    <article class="topic-card" data-title="<?php echo htmlspecialchars(strtolower($topic['title']), ENT_QUOTES, 'UTF-8'); ?>" data-lang="<?php echo $topic['lang']; ?>" data-categories="<?php echo htmlspecialchars($cat_slugs_str); ?>" data-slug="<?php echo htmlspecialchars($topic['slug']); ?>">
                         <div class="topic-badge-wrapper">
                             <span class="badge badge-<?php echo $topic['lang']; ?>">
                                 <?php echo $topic['lang'] === 'ar' ? 'العربية' : 'English'; ?>
@@ -266,6 +266,65 @@ foreach ($topics as $t) {
                 emptyState.remove();
             }
         }
+
+        // Render saved reading progress on cards
+        document.addEventListener('DOMContentLoaded', () => {
+            const cards = document.querySelectorAll('.topic-card');
+            cards.forEach(card => {
+                const slug = card.getAttribute('data-slug');
+                if (slug) {
+                    const progressVal = localStorage.getItem('reading_progress_' + slug);
+                    if (progressVal) {
+                        const progress = parseFloat(progressVal);
+                        if (progress > 2) {
+                            const dateRow = card.querySelector('.topic-date');
+                            
+                            // Create progress container
+                            const progressWrapper = document.createElement('div');
+                            progressWrapper.className = 'topic-progress-wrapper';
+                            progressWrapper.style.marginTop = '0.5rem';
+                            progressWrapper.style.display = 'flex';
+                            progressWrapper.style.flexDirection = 'column';
+                            progressWrapper.style.gap = '0.25rem';
+                            
+                            const textAndPercentage = document.createElement('div');
+                            textAndPercentage.style.display = 'flex';
+                            textAndPercentage.style.justifyContent = 'space-between';
+                            textAndPercentage.style.fontSize = '0.75rem';
+                            textAndPercentage.style.color = 'var(--text-secondary)';
+                            textAndPercentage.style.fontWeight = '600';
+                            
+                            const isFinished = progress >= 95;
+                            textAndPercentage.innerHTML = isFinished 
+                                ? `<span><i class="fa-solid fa-circle-check" style="color: var(--success-color);"></i> Completed</span><span>100%</span>`
+                                : `<span><i class="fa-solid fa-book-open" style="color: var(--accent-color);"></i> Reading Progress</span><span>${Math.round(progress)}%</span>`;
+                            
+                            const barContainer = document.createElement('div');
+                            barContainer.style.width = '100%';
+                            barContainer.style.height = '4px';
+                            barContainer.style.backgroundColor = 'var(--bg-primary)';
+                            barContainer.style.borderRadius = '2px';
+                            barContainer.style.overflow = 'hidden';
+                            
+                            const fillBar = document.createElement('div');
+                            fillBar.style.width = isFinished ? '100%' : progress + '%';
+                            fillBar.style.height = '100%';
+                            fillBar.style.backgroundColor = isFinished ? 'var(--success-color)' : 'var(--accent-color)';
+                            fillBar.style.borderRadius = '2px';
+                            
+                            barContainer.appendChild(fillBar);
+                            progressWrapper.appendChild(textAndPercentage);
+                            progressWrapper.appendChild(barContainer);
+                            
+                            // Insert right after the date row
+                            if (dateRow) {
+                                dateRow.after(progressWrapper);
+                            }
+                        }
+                    }
+                }
+            });
+        });
     </script>
 </body>
 </html>

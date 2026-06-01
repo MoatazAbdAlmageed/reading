@@ -267,7 +267,7 @@ header {
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  height: 280px;
+  min-height: 280px;
   position: relative;
 }
 
