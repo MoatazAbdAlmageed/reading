@@ -150,7 +150,11 @@ foreach ($topics as $t) {
                             </div>
                         <?php endif; ?>
 
-                        <h2 class="topic-title"><?php echo htmlspecialchars($topic['title']); ?></h2>
+                        <h2 class="topic-title">
+                            <a href="view.php?slug=<?php echo urlencode($topic['slug']); ?>">
+                                <?php echo htmlspecialchars($topic['title']); ?>
+                            </a>
+                        </h2>
                         <div class="topic-date">
                             <i class="fa-regular fa-calendar"></i> <?php echo date('M d, Y', strtotime($topic['date'])); ?>
                             <span style="float: right;"><i class="fa-solid fa-lines-leaning"></i> <?php echo $topic['word_count']; ?> words</span>

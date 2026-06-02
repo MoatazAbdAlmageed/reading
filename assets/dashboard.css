@@ -324,6 +324,16 @@ header {
   height: 3.5rem;
 }
 
+.topic-title a {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.topic-title a:hover {
+  color: var(--accent-color);
+}
+
 .topic-date {
   font-size: 0.8rem;
   color: var(--text-muted);

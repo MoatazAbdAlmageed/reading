@@ -1,0 +1,9 @@
+# Ignore all Markdown files (topics content and notes)
+*.md
+topics/*.md
+
+# Ignore all HTML files
+*.html
+
+# Ignore SQLite local database folder
+data/
