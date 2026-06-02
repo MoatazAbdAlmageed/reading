@@ -7,3 +7,6 @@ topics/*.md
 
 # Ignore SQLite local database folder
 data/
+
+# Ignore database backup files
+backups/

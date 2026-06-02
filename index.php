@@ -17,6 +17,15 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['slug'
     }
 }
 
+// Handle database backup
+if (isset($_GET['action']) && $_GET['action'] === 'backup') {
+    $backup_result = backup_database();
+    if ($backup_result) {
+        header("Location: index.php?backup_saved=" . urlencode($backup_result));
+        exit;
+    }
+}
+
 $topics = get_topics();
 $categories = get_categories();
 
@@ -53,6 +62,7 @@ foreach ($topics as $t) {
                 <p>Curate, draft, and enjoy high-fidelity reading resources in English & Arabic</p>
             </div>
             <div>
+                <a href="index.php?action=backup" class="btn btn-secondary" style="margin-right: 0.5rem;" title="Backup Database"><i class="fa-solid fa-database"></i> Backup DB</a>
                 <a href="categories.php" class="btn btn-secondary" style="margin-right: 0.5rem;"><i class="fa-solid fa-tags"></i> Manage Categories</a>
                 <a href="editor.php" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Create New Topic</a>
             </div>
@@ -67,6 +77,15 @@ foreach ($topics as $t) {
         <?php if (isset($_GET['saved'])): ?>
             <div class="alert-banner">
                 <i class="fa-solid fa-circle-check"></i> Topic has been successfully saved and synced.
+            </div>
+        <?php endif; ?>
+        <?php if (isset($_GET['backup_saved'])): ?>
+            <div class="alert-banner" style="justify-content: space-between; align-items: center; display: flex; flex-wrap: wrap; gap: 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <i class="fa-solid fa-circle-check"></i> 
+                    <span>Database successfully backed up! Created file: <code>/backups/<?php echo htmlspecialchars($_GET['backup_saved']); ?></code></span>
+                </div>
+                <a href="download.php?file=<?php echo urlencode($_GET['backup_saved']); ?>" class="btn btn-primary btn-sm" style="box-shadow: none; padding: 0.35rem 0.75rem;"><i class="fa-solid fa-download"></i> Download SQL</a>
             </div>
         <?php endif; ?>
 

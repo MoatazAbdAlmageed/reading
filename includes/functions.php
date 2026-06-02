@@ -525,3 +525,79 @@ function delete_topic($slug) {
     
     return true;
 }
+
+/**
+ * Backup the database (generates standardized portable SQL file for both MySQL & SQLite)
+ */
+function backup_database() {
+    $db = Database::connect();
+    $is_sqlite = Database::isSQLite();
+    
+    $backup_dir = __DIR__ . '/../backups';
+    if (!is_dir($backup_dir)) {
+        mkdir($backup_dir, 0777, true);
+    }
+    
+    $timestamp = date('Y-m-d_H-i-s');
+    $filename = "backup_" . ($is_sqlite ? "sqlite" : "mysql") . "_{$timestamp}.sql";
+    $filepath = $backup_dir . '/' . $filename;
+    
+    $sql_dump = "-- Knowledge Reader Database Backup\n";
+    $sql_dump .= "-- Generated on " . date('Y-m-d H:i:s') . "\n";
+    $sql_dump .= "-- Database engine: " . ($is_sqlite ? "SQLite" : "MySQL") . "\n\n";
+    
+    $tables = ['categories', 'topics', 'topic_categories'];
+    
+    foreach ($tables as $table) {
+        $sql_dump .= "-- --------------------------------------------------------\n";
+        $sql_dump .= "-- Table structure for `{$table}`\n";
+        $sql_dump .= "-- --------------------------------------------------------\n";
+        
+        if ($is_sqlite) {
+            // Get SQLite schema
+            $stmt = $db->prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name = :name");
+            $stmt->execute([':name' => $table]);
+            $row = $stmt->fetch();
+            if ($row) {
+                $sql_dump .= "DROP TABLE IF EXISTS `{$table}`;\n";
+                $sql_dump .= $row['sql'] . ";\n\n";
+            }
+        } else {
+            // Get MySQL schema
+            $stmt = $db->query("SHOW CREATE TABLE `{$table}`");
+            $row = $stmt->fetch();
+            if ($row && isset($row['Create Table'])) {
+                $sql_dump .= "DROP TABLE IF EXISTS `{$table}`;\n";
+                $sql_dump .= $row['Create Table'] . ";\n\n";
+            }
+        }
+        
+        $sql_dump .= "-- Dumping data for `{$table}`\n";
+        $stmt_data = $db->query("SELECT * FROM `{$table}`");
+        $rows = $stmt_data->fetchAll(PDO::FETCH_ASSOC);
+        
+        if (!empty($rows)) {
+            foreach ($rows as $row) {
+                $keys = array_keys($row);
+                $escaped_keys = array_map(function($k) { return "`{$k}`"; }, $keys);
+                
+                $values = array_values($row);
+                $escaped_values = array_map(function($v) use ($db) {
+                    if ($v === null) {
+                        return "NULL";
+                    }
+                    return $db->quote($v);
+                }, $values);
+                
+                $sql_dump .= "INSERT INTO `{$table}` (" . implode(', ', $escaped_keys) . ") VALUES (" . implode(', ', $escaped_values) . ");\n";
+            }
+        }
+        $sql_dump .= "\n";
+    }
+    
+    if (file_put_contents($filepath, $sql_dump) !== false) {
+        return $filename;
+    }
+    
+    return false;
+}
