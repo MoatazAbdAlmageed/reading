@@ -318,7 +318,7 @@ function get_topics() {
     
     $db = Database::connect();
     // Sort by creation date descending
-    $stmt = $db->query("SELECT id, slug, title, lang, created_at, content FROM topics ORDER BY created_at DESC");
+    $stmt = $db->query("SELECT id, slug, title, lang, created_at, content, reading_progress FROM topics ORDER BY created_at DESC");
     $topics = [];
     
     while ($row = $stmt->fetch()) {
@@ -339,6 +339,7 @@ function get_topics() {
             'date' => $row['created_at'],
             'word_count' => $word_count,
             'read_time' => $read_time,
+            'reading_progress' => $row['reading_progress'] ?? 0,
             'categories' => $categories
         ];
     }
@@ -375,6 +376,7 @@ function get_topic($slug) {
                 'slug' => $row['slug'],
                 'word_count' => $word_count,
                 'read_time' => max(1, ceil($word_count / 150)),
+                'reading_progress' => $row['reading_progress'] ?? 0,
                 'categories' => $categories
             ],
             'markdown' => $row['content']

@@ -150,7 +150,7 @@ foreach ($topics as $t) {
                     $cat_slugs = array_column($topic['categories'], 'slug');
                     $cat_slugs_str = implode(',', $cat_slugs);
                     ?>
-                    <article class="topic-card" data-title="<?php echo htmlspecialchars(strtolower($topic['title']), ENT_QUOTES, 'UTF-8'); ?>" data-lang="<?php echo $topic['lang']; ?>" data-categories="<?php echo htmlspecialchars($cat_slugs_str); ?>" data-slug="<?php echo htmlspecialchars($topic['slug']); ?>">
+                    <article class="topic-card" data-title="<?php echo htmlspecialchars(strtolower($topic['title']), ENT_QUOTES, 'UTF-8'); ?>" data-lang="<?php echo $topic['lang']; ?>" data-categories="<?php echo htmlspecialchars($cat_slugs_str); ?>" data-slug="<?php echo htmlspecialchars($topic['slug']); ?>" data-db-progress="<?php echo $topic['reading_progress'] ?? 0; ?>">
                         <div class="topic-badge-wrapper">
                             <span class="badge badge-<?php echo $topic['lang']; ?>">
                                 <?php echo $topic['lang'] === 'ar' ? 'العربية' : 'English'; ?>
@@ -297,10 +297,16 @@ foreach ($topics as $t) {
             cards.forEach(card => {
                 const slug = card.getAttribute('data-slug');
                 if (slug) {
-                    const progressVal = localStorage.getItem('reading_progress_' + slug);
-                    if (progressVal) {
-                        const progress = parseFloat(progressVal);
-                        if (progress > 2) {
+                    const localProgressVal = localStorage.getItem('reading_progress_' + slug);
+                    const dbProgressVal = card.getAttribute('data-db-progress');
+                    let progress = 0;
+                    if (localProgressVal) {
+                        progress = parseFloat(localProgressVal);
+                    }
+                    if (dbProgressVal && parseFloat(dbProgressVal) > progress) {
+                        progress = parseFloat(dbProgressVal);
+                    }
+                    if (progress > 2) {
                             const dateRow = card.querySelector('.topic-date');
                             
                             // Create progress container
@@ -345,7 +351,6 @@ foreach ($topics as $t) {
                                 dateRow.after(progressWrapper);
                             }
                         }
-                    }
                 }
             });
         });

@@ -224,6 +224,7 @@ $word_count = $topic['metadata']['word_count'];
 
     <script>
         const slug = <?php echo json_encode($slug); ?>;
+        const dbProgress = <?php echo json_encode($topic['metadata']['reading_progress'] ?? 0); ?>;
         
         // Inject safely escaped raw markdown from PHP directly into JS
         const rawMarkdown = <?php echo json_encode($topic['markdown']); ?>;
@@ -250,18 +251,31 @@ $word_count = $topic['metadata']['word_count'];
             
             document.getElementById('progress-bar').style.width = scrolled + '%';
             
-            // Debounce saving progress to localStorage
+            // Debounce saving progress to localStorage and DB
             window.clearTimeout(isScrolling);
             isScrolling = setTimeout(() => {
-                localStorage.setItem('reading_progress_' + slug, scrolled.toFixed(1));
-            }, 100);
+                const prog = scrolled.toFixed(1);
+                localStorage.setItem('reading_progress_' + slug, prog);
+                
+                fetch('api_save_progress.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'slug=' + encodeURIComponent(slug) + '&progress=' + encodeURIComponent(prog)
+                }).catch(err => console.error(err));
+            }, 500);
         });
 
         // Restore saved reading progress
         window.addEventListener('load', () => {
-            const savedProgress = localStorage.getItem('reading_progress_' + slug);
+            let savedProgress = localStorage.getItem('reading_progress_' + slug);
+            let progress = 0;
             if (savedProgress) {
-                const progress = parseFloat(savedProgress);
+                progress = parseFloat(savedProgress);
+            }
+            if (dbProgress > progress) {
+                progress = parseFloat(dbProgress);
+            }
+            
                 if (progress > 1 && progress < 99) { // Only restore if significant progress and not completed
                     // Wait for fonts & rendering
                     setTimeout(() => {
@@ -275,7 +289,6 @@ $word_count = $topic['metadata']['word_count'];
                         showToast(`Resumed from ${Math.round(progress)}% progress`);
                     }, 300);
                 }
-            }
         });
 
         function showToast(message) {
@@ -291,6 +304,13 @@ $word_count = $topic['metadata']['word_count'];
 
         function resetProgress() {
             localStorage.removeItem('reading_progress_' + slug);
+            
+            fetch('api_save_progress.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'slug=' + encodeURIComponent(slug) + '&progress=0'
+            }).catch(err => console.error(err));
+
             window.scrollTo({
                 top: 0,
                 behavior: 'smooth'

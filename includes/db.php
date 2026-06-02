@@ -87,10 +87,17 @@ class Database {
             `title` VARCHAR(255) NOT NULL,
             `lang` VARCHAR(10) NOT NULL DEFAULT 'en',
             `content` LONGTEXT NOT NULL,
+            `reading_progress` DECIMAL(5,2) DEFAULT 0,
             `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
         $pdo->exec($sql);
+        
+        try {
+            $pdo->exec("ALTER TABLE `topics` ADD COLUMN `reading_progress` DECIMAL(5,2) DEFAULT 0");
+        } catch (PDOException $e) {
+            // Ignore if column already exists
+        }
 
         $sql_cats = "CREATE TABLE IF NOT EXISTS `categories` (
             `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -119,10 +126,17 @@ class Database {
             `title` VARCHAR(255) NOT NULL,
             `lang` VARCHAR(10) NOT NULL DEFAULT 'en',
             `content` TEXT NOT NULL,
+            `reading_progress` DECIMAL(5,2) DEFAULT 0,
             `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
             `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP
         );";
         $pdo->exec($sql);
+        
+        try {
+            $pdo->exec("ALTER TABLE `topics` ADD COLUMN `reading_progress` DECIMAL(5,2) DEFAULT 0");
+        } catch (PDOException $e) {
+            // Ignore if column already exists
+        }
 
         $sql_cats = "CREATE TABLE IF NOT EXISTS `categories` (
             `id` INTEGER PRIMARY KEY AUTOINCREMENT,
