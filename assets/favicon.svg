@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#4b6ef5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Premium Book cover base -->
+    <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z" fill="#121624" />
+    <!-- Detailed bookmark ribbon -->
+    <path d="M16 2v6l-2-2-2 2V2" fill="#7c9ef5" stroke="none" />
+    <!-- Elegant text lines representing knowledge -->
+    <path d="M7 8h5" stroke="#7c9ef5" stroke-width="1.5" />
+    <path d="M7 12h9" stroke="#7c9ef5" stroke-width="1.5" />
+    <path d="M7 16h7" stroke="#7c9ef5" stroke-width="1.5" />
+</svg>

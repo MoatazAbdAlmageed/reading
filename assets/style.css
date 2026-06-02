@@ -80,7 +80,7 @@ body h5,
 body h6 {
   padding: 10px;
   color: var(--reading-bg);
-  background-color: var(--reading-code-text);
+  background-color: var(--reading-text-accent);
   font-weight: 700;
   line-height: 1.4;
   margin-block: var(--reading-spacing) 0.6rem;

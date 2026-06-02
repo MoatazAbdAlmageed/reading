@@ -33,6 +33,7 @@ $word_count = $topic['metadata']['word_count'];
     <!-- Dynamic SEO Optimization -->
     <title><?php echo htmlspecialchars($title); ?></title>
     <meta name="description" content="Read <?php echo htmlspecialchars($title); ?> on Knowledge Reader. An educational resource curated in <?php echo $lang === 'ar' ? 'Arabic' : 'English'; ?>.">
+    <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg">
     
     <!-- Load Core Stylesheets as requested -->
     <link rel="stylesheet" href="./assets/style.css">
