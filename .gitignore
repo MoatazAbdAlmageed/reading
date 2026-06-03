@@ -10,3 +10,4 @@ data/
 
 # Ignore database backup files
 backups/
+node_modules

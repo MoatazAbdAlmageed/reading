@@ -92,6 +92,8 @@ function parse_topic_file($filepath) {
     $metadata['word_count'] = $word_count;
     $metadata['read_time'] = max(1, ceil($word_count / 150)); // Average reading speed for technical: 150 wpm
     
+    $markdown = preg_replace('/\*\*(.*?)\*\*/su', '<strong>$1</strong>', $markdown);
+    
     return [
         'metadata' => $metadata,
         'markdown' => trim($markdown)
