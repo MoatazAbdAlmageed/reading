@@ -148,6 +148,99 @@ $word_count = $topic['metadata']['word_count'];
                 display: none !important;
             }
         }
+
+        /* TOC Sidebar Layout */
+        .reader-layout {
+            display: flex;
+            gap: 3rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            padding: 0 1rem;
+        }
+
+        .toc-sidebar {
+            width: 250px;
+            flex-shrink: 0;
+            position: sticky;
+            top: 2rem;
+            height: calc(100vh - 4rem);
+            overflow-y: auto;
+            font-family: 'Outfit', sans-serif;
+            padding-right: 1rem;
+            display: none; /* Shown by JS if headings exist */
+        }
+        
+        .toc-sidebar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .toc-sidebar::-webkit-scrollbar-thumb {
+            background-color: var(--reading-border, #2a2f3e);
+            border-radius: 4px;
+        }
+
+        .toc-sidebar h3 {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--reading-text-muted, #7a8099);
+            margin-bottom: 1rem;
+        }
+
+        .toc-nav {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .toc-link {
+            display: block;
+            padding: 0.35rem 0;
+            color: var(--reading-text, #d4d8e8);
+            text-decoration: none;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            transition: color 0.2s;
+            border-left: 2px solid transparent;
+            padding-left: 1rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .toc-link:hover {
+            color: var(--reading-text-accent, #7c9ef5);
+        }
+
+        .toc-link.active {
+            color: var(--reading-text-accent, #7c9ef5);
+            border-left-color: var(--reading-text-accent, #7c9ef5);
+            font-weight: 600;
+        }
+
+        .toc-link.depth-1 { padding-left: 1rem; font-weight: 500; }
+        .toc-link.depth-2 { padding-left: 1rem; }
+        .toc-link.depth-3 { padding-left: 2rem; font-size: 0.85rem; }
+        .toc-link.depth-4 { padding-left: 3rem; font-size: 0.85rem; }
+
+        .reader-main {
+            flex: 1;
+            min-width: 0;
+        }
+
+        @media (max-width: 900px) {
+            .reader-layout {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            .toc-sidebar {
+                position: static;
+                width: 100%;
+                height: auto;
+                max-height: 300px;
+                border-bottom: 1px solid var(--reading-border, #2a2f3e);
+                margin-bottom: 1rem;
+                padding-bottom: 1rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -161,53 +254,64 @@ $word_count = $topic['metadata']['word_count'];
         <button onclick="resetProgress()" style="background: none; border: none; color: var(--reading-link, #7c9ef5); cursor: pointer; text-decoration: underline; font-family: inherit; font-size: 0.85rem; margin-left: 0.5rem; padding: 0; font-weight: 600;">Restart</button>
     </div>
 
-    <!-- Reader Header Toolbar -->
-    <div class="reader-header no-print">
-        <div>
-            <a href="index.php" class="reader-btn">
-                <i class="fa-solid fa-arrow-left"></i> Dashboard
-            </a>
-        </div>
-        <div style="font-family: 'Outfit', sans-serif; font-size: 0.85rem; color: var(--reading-text-muted);">
-            <i class="fa-solid fa-book-open"></i> Immersive Mode
-        </div>
-        <div>
-            <a href="editor.php?slug=<?php echo urlencode($slug); ?>" class="reader-btn reader-btn-accent">
-                <i class="fa-solid fa-pen-to-square"></i> Edit Topic
-            </a>
-        </div>
-    </div>
+    <div class="reader-layout">
+        <!-- Sidebar TOC -->
+        <aside class="toc-sidebar no-print" id="tocSidebar">
+            <h3>Table of Contents</h3>
+            <div id="tocNav" class="toc-nav"></div>
+        </aside>
 
-    <!-- Article Header -->
-    <h1 style="margin-bottom: 0.5rem;"><?php echo htmlspecialchars($title); ?></h1>
+        <!-- Main Content Area -->
+        <div class="reader-main">
+            <!-- Reader Header Toolbar -->
+            <div class="reader-header no-print">
+                <div>
+                    <a href="index.php" class="reader-btn">
+                        <i class="fa-solid fa-arrow-left"></i> Dashboard
+                    </a>
+                </div>
+                <div style="font-family: 'Outfit', sans-serif; font-size: 0.85rem; color: var(--reading-text-muted);">
+                    <i class="fa-solid fa-book-open"></i> Immersive Mode
+                </div>
+                <div>
+                    <a href="editor.php?slug=<?php echo urlencode($slug); ?>" class="reader-btn reader-btn-accent">
+                        <i class="fa-solid fa-pen-to-square"></i> Edit Topic
+                    </a>
+                </div>
+            </div>
 
-    <!-- Metadata Row -->
-    <div class="metadata-pill-box">
-        <span class="metadata-pill">
-            <i class="fa-regular fa-calendar"></i> <?php echo date('M d, Y', strtotime($date)); ?>
-        </span>
-        <span class="metadata-pill">
-            <i class="fa-regular fa-clock"></i> <?php echo $read_time; ?> min read
-        </span>
-        <span class="metadata-pill">
-            <i class="fa-solid fa-lines-leaning"></i> <?php echo $word_count; ?> words
-        </span>
-        <span class="metadata-pill">
-            <i class="fa-solid fa-globe"></i> <?php echo $lang === 'ar' ? 'العربية' : 'English'; ?>
-        </span>
-        <?php if (!empty($topic['metadata']['categories'])): ?>
-            <?php foreach ($topic['metadata']['categories'] as $cat): ?>
-                <span class="metadata-pill" style="border-color: rgba(124, 158, 245, 0.4); color: var(--reading-link, #7c9ef5); font-weight: 600;">
-                    <i class="fa-solid fa-tag"></i> <?php echo htmlspecialchars($cat['name']); ?>
+            <!-- Article Header -->
+            <h1 style="margin-bottom: 0.5rem;"><?php echo htmlspecialchars($title); ?></h1>
+
+            <!-- Metadata Row -->
+            <div class="metadata-pill-box">
+                <span class="metadata-pill">
+                    <i class="fa-regular fa-calendar"></i> <?php echo date('M d, Y', strtotime($date)); ?>
                 </span>
-            <?php endforeach; ?>
-        <?php endif; ?>
-    </div>
+                <span class="metadata-pill">
+                    <i class="fa-regular fa-clock"></i> <?php echo $read_time; ?> min read
+                </span>
+                <span class="metadata-pill">
+                    <i class="fa-solid fa-lines-leaning"></i> <?php echo $word_count; ?> words
+                </span>
+                <span class="metadata-pill">
+                    <i class="fa-solid fa-globe"></i> <?php echo $lang === 'ar' ? 'العربية' : 'English'; ?>
+                </span>
+                <?php if (!empty($topic['metadata']['categories'])): ?>
+                    <?php foreach ($topic['metadata']['categories'] as $cat): ?>
+                        <span class="metadata-pill" style="border-color: rgba(124, 158, 245, 0.4); color: var(--reading-link, #7c9ef5); font-weight: 600;">
+                            <i class="fa-solid fa-tag"></i> <?php echo htmlspecialchars($cat['name']); ?>
+                        </span>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
 
-    <!-- Rendered Markdown Container -->
-    <main id="content">
-        <!-- Rendered HTML will be injected dynamically -->
-    </main>
+            <!-- Rendered Markdown Container -->
+            <main id="content">
+                <!-- Rendered HTML will be injected dynamically -->
+            </main>
+        </div>
+    </div>
 
     <!-- Markdown Parser and Highlight Engine -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -241,6 +345,51 @@ $word_count = $topic['metadata']['word_count'];
         Prism.highlightAll();
 
         /**
+         * Generate Table of Contents
+         */
+        function generateTOC() {
+            const content = document.getElementById('content');
+            const headings = content.querySelectorAll('h1, h2, h3, h4');
+            const tocNav = document.getElementById('tocNav');
+            const tocSidebar = document.getElementById('tocSidebar');
+            
+            if (headings.length === 0) return;
+            
+            tocSidebar.style.display = 'block';
+            let html = '';
+            
+            headings.forEach((heading, index) => {
+                if (!heading.id) {
+                    heading.id = 'heading-' + index + '-' + heading.textContent.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                }
+                
+                const level = parseInt(heading.tagName.substring(1));
+                const depthClass = 'depth-' + level;
+                
+                html += `<a href="#${heading.id}" class="toc-link ${depthClass}" data-target="${heading.id}">${heading.textContent}</a>`;
+            });
+            
+            tocNav.innerHTML = html;
+            
+            // Smooth scrolling for TOC links
+            document.querySelectorAll('.toc-link').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href').substring(1);
+                    const targetElement = document.getElementById(targetId);
+                    if (targetElement) {
+                        window.scrollTo({
+                            top: targetElement.getBoundingClientRect().top + window.scrollY - 20,
+                            behavior: 'smooth'
+                        });
+                    }
+                });
+            });
+        }
+        
+        generateTOC();
+
+        /**
          * Reading Progress Indicator and Storage script
          */
         let isScrolling;
@@ -250,6 +399,30 @@ $word_count = $topic['metadata']['word_count'];
             const scrolled = height > 0 ? (winScroll / height) * 100 : 0;
             
             document.getElementById('progress-bar').style.width = scrolled + '%';
+            
+            // Highlight active TOC item
+            const headings = Array.from(document.getElementById('content').querySelectorAll('h1, h2, h3, h4'));
+            let currentId = null;
+            
+            if (headings.length > 0) {
+                currentId = headings[0].id; // default
+                
+                for (let i = headings.length - 1; i >= 0; i--) {
+                    const rect = headings[i].getBoundingClientRect();
+                    if (rect.top <= 150) {
+                        currentId = headings[i].id;
+                        break;
+                    }
+                }
+                
+                if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 10) {
+                    currentId = headings[headings.length - 1].id;
+                }
+                
+                document.querySelectorAll('.toc-link').forEach(link => link.classList.remove('active'));
+                const activeLink = document.querySelector(`.toc-link[data-target="${currentId}"]`);
+                if (activeLink) activeLink.classList.add('active');
+            }
             
             // Debounce saving progress to localStorage and DB
             window.clearTimeout(isScrolling);
