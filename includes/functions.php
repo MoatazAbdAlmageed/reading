@@ -219,11 +219,12 @@ function sync_database_and_files() {
         if (!isset($db_topics[$slug])) {
             $parsed = parse_topic_file($file);
             if ($parsed) {
+                $lang = preg_match('/\p{Arabic}/u', $slug) ? 'ar' : 'en';
                 $stmt_insert = $db->prepare("INSERT INTO topics (slug, title, lang, content, created_at, updated_at) VALUES (:slug, :title, :lang, :content, :created, :updated)");
                 $stmt_insert->execute([
                     ':slug' => $slug,
                     ':title' => $slug,
-                    ':lang' => $parsed['metadata']['lang'],
+                    ':lang' => $lang,
                     ':content' => $parsed['markdown'],
                     ':created' => $parsed['metadata']['date'] ?? date('Y-m-d H:i:s', $file_mtime),
                     ':updated' => date('Y-m-d H:i:s', $file_mtime)
@@ -248,10 +249,11 @@ function sync_database_and_files() {
             if ($file_mtime > $db_updated + 2) {
                 $parsed = parse_topic_file($file);
                 if ($parsed) {
+                    $lang = preg_match('/\p{Arabic}/u', $slug) ? 'ar' : 'en';
                     $stmt_update = $db->prepare("UPDATE topics SET title = :title, lang = :lang, content = :content, updated_at = :updated WHERE slug = :slug");
                     $stmt_update->execute([
                         ':title' => $slug,
-                        ':lang' => $parsed['metadata']['lang'],
+                        ':lang' => $lang,
                         ':content' => $parsed['markdown'],
                         ':updated' => date('Y-m-d H:i:s', $file_mtime),
                         ':slug' => $slug
@@ -388,12 +390,13 @@ function get_topic($slug) {
     if (file_exists($filepath)) {
         $parsed = parse_topic_file($filepath);
         if ($parsed) {
+            $lang = preg_match('/\p{Arabic}/u', $slug) ? 'ar' : 'en';
             // Save to DB
             $stmt_insert = $db->prepare("INSERT INTO topics (slug, title, lang, content, created_at, updated_at) VALUES (:slug, :title, :lang, :content, :created, :updated)");
             $stmt_insert->execute([
                 ':slug' => $slug,
                 ':title' => $slug,
-                ':lang' => $parsed['metadata']['lang'],
+                ':lang' => $lang,
                 ':content' => $parsed['markdown'],
                 ':created' => $parsed['metadata']['date'],
                 ':updated' => date('Y-m-d H:i:s')
