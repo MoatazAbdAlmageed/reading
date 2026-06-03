@@ -222,7 +222,7 @@ function sync_database_and_files() {
                 $stmt_insert = $db->prepare("INSERT INTO topics (slug, title, lang, content, created_at, updated_at) VALUES (:slug, :title, :lang, :content, :created, :updated)");
                 $stmt_insert->execute([
                     ':slug' => $slug,
-                    ':title' => $parsed['metadata']['title'],
+                    ':title' => $slug,
                     ':lang' => $parsed['metadata']['lang'],
                     ':content' => $parsed['markdown'],
                     ':created' => $parsed['metadata']['date'] ?? date('Y-m-d H:i:s', $file_mtime),
@@ -250,7 +250,7 @@ function sync_database_and_files() {
                 if ($parsed) {
                     $stmt_update = $db->prepare("UPDATE topics SET title = :title, lang = :lang, content = :content, updated_at = :updated WHERE slug = :slug");
                     $stmt_update->execute([
-                        ':title' => $parsed['metadata']['title'],
+                        ':title' => $slug,
                         ':lang' => $parsed['metadata']['lang'],
                         ':content' => $parsed['markdown'],
                         ':updated' => date('Y-m-d H:i:s', $file_mtime),
@@ -392,7 +392,7 @@ function get_topic($slug) {
             $stmt_insert = $db->prepare("INSERT INTO topics (slug, title, lang, content, created_at, updated_at) VALUES (:slug, :title, :lang, :content, :created, :updated)");
             $stmt_insert->execute([
                 ':slug' => $slug,
-                ':title' => $parsed['metadata']['title'],
+                ':title' => $slug,
                 ':lang' => $parsed['metadata']['lang'],
                 ':content' => $parsed['markdown'],
                 ':created' => $parsed['metadata']['date'],
