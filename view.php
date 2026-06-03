@@ -149,6 +149,20 @@ $word_count = $topic['metadata']['word_count'];
             }
         }
 
+        /* Override style.css body constraints */
+        html, body {
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow-x: clip !important; /* clip prevents scrollbar but preserves position: sticky */
+        }
+
+        /* Responsive HR */
+        hr {
+            max-width: 100%;
+            overflow: hidden;
+        }
+
         /* TOC Sidebar Layout */
         .reader-layout {
             display: flex;
@@ -156,7 +170,7 @@ $word_count = $topic['metadata']['word_count'];
             max-width: 1200px;
             margin: 0 auto;
             position: relative;
-            padding: 0 1rem;
+            padding: 2rem 1rem;
         }
 
         .toc-sidebar {
@@ -224,21 +238,28 @@ $word_count = $topic['metadata']['word_count'];
         .reader-main {
             flex: 1;
             min-width: 0;
+            max-width: 75ch; /* Keeps reading line length optimal */
+            margin: 0 auto;
         }
 
         @media (max-width: 900px) {
             .reader-layout {
                 flex-direction: column;
                 gap: 1rem;
+                padding: 1.5rem 1rem;
             }
             .toc-sidebar {
                 position: static;
                 width: 100%;
                 height: auto;
-                max-height: 300px;
+                max-height: 250px;
                 border-bottom: 1px solid var(--reading-border, #2a2f3e);
                 margin-bottom: 1rem;
                 padding-bottom: 1rem;
+            }
+            .reader-header {
+                flex-wrap: wrap;
+                gap: 0.75rem;
             }
         }
     </style>
