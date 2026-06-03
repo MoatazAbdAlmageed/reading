@@ -13,10 +13,10 @@
   --reading-text: #d4d8e8;
   --reading-text-muted: #7a8099;
   --reading-text-heading: #eaedf7;
-  --reading-text-accent: #7c9ef5;
+  --reading-text-accent: #9374d7;
   --reading-text-quote: #a3aac5;
 
-  --reading-link: #7c9ef5;
+  --reading-link: #9374d7;
   --reading-link-hover: #a8bfff;
   --reading-selection-bg: #2d3a5e;
   --reading-selection-fg: #eaedf7;
@@ -79,7 +79,7 @@ body h4,
 body h5,
 body h6 {
   padding: 10px;
-  color: var(--reading-bg);
+  color: var(--reading-text-heading);
   background-color: var(--reading-text-accent);
   font-weight: 700;
   line-height: 1.4;
