@@ -294,7 +294,10 @@ $word_count = $topic['metadata']['word_count'];
                 <div style="font-family: 'Outfit', sans-serif; font-size: 0.85rem; color: var(--reading-text-muted);">
                     <i class="fa-solid fa-book-open"></i> Immersive Mode
                 </div>
-                <div>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <button id="toggleSidebarBtn" onclick="toggleSidebar()" class="reader-btn" style="display: none; cursor: pointer; border: none; font-family: inherit; font-size: inherit;" title="Toggle Table of Contents">
+                        <i class="fa-solid fa-list-ul"></i>
+                    </button>
                     <a href="editor.php?slug=<?php echo urlencode($slug); ?>" class="reader-btn reader-btn-accent">
                         <i class="fa-solid fa-pen-to-square"></i> Edit Topic
                     </a>
@@ -377,6 +380,9 @@ $word_count = $topic['metadata']['word_count'];
             if (headings.length === 0) return;
             
             tocSidebar.style.display = 'block';
+            const toggleBtn = document.getElementById('toggleSidebarBtn');
+            if (toggleBtn) toggleBtn.style.display = 'inline-flex';
+            
             let html = '';
             
             headings.forEach((heading, index) => {
@@ -409,6 +415,17 @@ $word_count = $topic['metadata']['word_count'];
         }
         
         generateTOC();
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('tocSidebar');
+            if (!sidebar) return;
+            
+            if (sidebar.style.display === 'none' || sidebar.style.display === '') {
+                sidebar.style.display = 'block';
+            } else {
+                sidebar.style.display = 'none';
+            }
+        }
 
         /**
          * Reading Progress Indicator and Storage script
