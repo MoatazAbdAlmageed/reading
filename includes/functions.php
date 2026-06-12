@@ -14,6 +14,43 @@ if (!is_dir(TOPICS_DIR)) {
 }
 
 /**
+ * Recursively get all markdown files in a directory
+ */
+function get_all_markdown_files($dir) {
+    $files = [];
+    if (!is_dir($dir)) return $files;
+    
+    $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS));
+    foreach ($iterator as $file) {
+        if ($file->isFile() && strtolower($file->getExtension()) === 'md') {
+            $files[] = str_replace('\\', '/', $file->getPathname());
+        }
+    }
+    return $files;
+}
+
+
+/**
+ * Generate a unique slug for a file based on its relative path
+ */
+function generate_file_slug($filepath) {
+    $real_filepath = str_replace('\\', '/', realpath($filepath) ?: $filepath);
+    $real_topics_dir = str_replace('\\', '/', realpath(TOPICS_DIR) ?: TOPICS_DIR);
+    $filename = pathinfo($real_filepath, PATHINFO_FILENAME);
+    $slug = slugify($filename);
+    
+    $dir_path = dirname($real_filepath);
+    if (stripos($dir_path, $real_topics_dir) === 0 && strlen($dir_path) > strlen($real_topics_dir)) {
+        $relative_dir = trim(substr($dir_path, strlen($real_topics_dir)), '/');
+        if (!empty($relative_dir)) {
+            $dir_slug = slugify(str_replace('/', '-', $relative_dir));
+            $slug = $dir_slug . '-' . $slug;
+        }
+    }
+    return $slug;
+}
+
+/**
  * Generate a clean, URL-safe slug from a string (supports both English and Arabic)
  */
 function slugify($text) {
@@ -43,13 +80,35 @@ function parse_topic_file($filepath) {
     $filename = basename($filepath);
     $slug = pathinfo($filename, PATHINFO_FILENAME);
     
+    // Calculate default title and categories based on filename and directory
+    $default_title = ucwords(str_replace(['-', '_'], ' ', $slug));
+    $default_categories = [];
+    
+    $real_filepath = str_replace('\\', '/', realpath($filepath) ?: $filepath);
+    $real_topics_dir = str_replace('\\', '/', realpath(TOPICS_DIR) ?: TOPICS_DIR);
+    
+    $dir_path = dirname($real_filepath);
+    if (stripos($dir_path, $real_topics_dir) === 0 && strlen($dir_path) > strlen($real_topics_dir)) {
+        $relative_dir = trim(substr($dir_path, strlen($real_topics_dir)), '/');
+        if (!empty($relative_dir)) {
+            // Add folder names as categories
+            $folders = explode('/', $relative_dir);
+            foreach ($folders as $folder) {
+                $clean_folder = trim(str_replace(['-', '_'], ' ', $folder));
+                if (!empty($clean_folder)) {
+                    $default_categories[] = ucwords($clean_folder);
+                }
+            }
+        }
+    }
+    
     // Default metadata
     $metadata = [
-        'title' => ucwords(str_replace('-', ' ', $slug)),
-        'lang' => 'en',
+        'title' => $default_title,
+        'lang' => 'ar',
         'date' => date('Y-m-d H:i:s', filemtime($filepath)),
         'slug' => $slug,
-        'categories' => []
+        'categories' => $default_categories
     ];
     
     $markdown = $content;
@@ -71,11 +130,11 @@ function parse_topic_file($filepath) {
                 // Remove surrounding quotes
                 $val = trim($val, "\"'");
                 if ($key === 'lang') {
-                    $val = strtolower($val) === 'ar' || strtolower($val) === 'arabic' ? 'ar' : 'en';
+                    $val = strtolower($val) === 'en' || strtolower($val) === 'english' ? 'en' : 'ar';
                 }
                 if ($key === 'categories') {
                     $cats = array_map('trim', explode(',', $val));
-                    $metadata['categories'] = array_filter($cats);
+                    $metadata['categories'] = array_unique(array_merge($metadata['categories'], array_filter($cats)));
                 } else {
                     $metadata[$key] = $val;
                 }
@@ -83,6 +142,8 @@ function parse_topic_file($filepath) {
         }
     }
     
+    // Enforce the filename as the title, overriding any YAML front-matter title
+    $metadata['title'] = $default_title;
     $metadata['slug'] = $slug;
     
     // Simple word count helper that is clean
@@ -201,115 +262,92 @@ function delete_category($id) {
 function sync_database_and_files() {
     $db = Database::connect();
     
-    // 1. Get all markdown files in TOPICS_DIR
-    $files = glob(TOPICS_DIR . '/*.md');
+    // 1. Get all markdown files in TOPICS_DIR (recursively)
+    $files = get_all_markdown_files(TOPICS_DIR);
     $file_slugs = [];
     
     // 2. Fetch all database records
     $stmt = $db->query("SELECT id, slug, title, lang, created_at, updated_at FROM topics");
     $db_topics = [];
     while ($row = $stmt->fetch()) {
-        $db_topics[$row['slug']] = $row;
+        $db_topics[strtolower($row['slug'])] = $row;
     }
     
     foreach ($files as $file) {
-        $slug = pathinfo($file, PATHINFO_FILENAME);
-        $file_slugs[] = $slug;
+        $filename_slug = slugify(pathinfo($file, PATHINFO_FILENAME));
+        $unique_slug = generate_file_slug($file);
         $file_mtime = filemtime($file);
         
-        // If file exists on disk but not in the database, insert it
-        if (!isset($db_topics[$slug])) {
-            $parsed = parse_topic_file($file);
-            if ($parsed) {
-                $lang = preg_match('/\p{Arabic}/u', $slug) ? 'ar' : 'en';
+        $db_topic = null;
+        $active_slug = $unique_slug;
+        
+        if (isset($db_topics[$unique_slug])) {
+            $db_topic = $db_topics[$unique_slug];
+        } else if (isset($db_topics[$filename_slug])) {
+            // Migrate old slug to new unique slug
+            $stmt_mig = $db->prepare("UPDATE topics SET slug = :new_slug WHERE slug = :old_slug");
+            $stmt_mig->execute([':new_slug' => $unique_slug, ':old_slug' => $db_topics[$filename_slug]['slug']]);
+            $db_topic = $db_topics[$filename_slug];
+            $db_topic['slug'] = $unique_slug;
+            $db_topics[$unique_slug] = $db_topic;
+            unset($db_topics[$filename_slug]);
+        }
+        
+        $file_slugs[] = $active_slug;
+        
+        $file_slugs[] = $active_slug;
+        
+        // Unconditionally parse and import the file, then delete it
+        $parsed = parse_topic_file($file);
+        if ($parsed) {
+            $lang = $parsed['metadata']['lang'] ?? 'ar';
+            $title = $parsed['metadata']['title'] ?? $active_slug;
+            $content = $parsed['markdown'];
+            $now = date('Y-m-d H:i:s');
+            
+            if (!$db_topic) {
+                // Insert new topic
+                $created = $parsed['metadata']['date'] ?? $now;
                 $stmt_insert = $db->prepare("INSERT INTO topics (slug, title, lang, content, created_at, updated_at) VALUES (:slug, :title, :lang, :content, :created, :updated)");
                 $stmt_insert->execute([
-                    ':slug' => $slug,
-                    ':title' => $slug,
+                    ':slug' => $active_slug,
+                    ':title' => $title,
                     ':lang' => $lang,
-                    ':content' => $parsed['markdown'],
-                    ':created' => $parsed['metadata']['date'] ?? date('Y-m-d H:i:s', $file_mtime),
-                    ':updated' => date('Y-m-d H:i:s', $file_mtime)
+                    ':content' => $content,
+                    ':created' => $created,
+                    ':updated' => $now
                 ]);
                 $topic_id = $db->lastInsertId();
+            } else {
+                // Update existing topic
+                $topic_id = $db_topic['id'];
+                $stmt_update = $db->prepare("UPDATE topics SET title = :title, lang = :lang, content = :content, updated_at = :updated WHERE slug = :slug");
+                $stmt_update->execute([
+                    ':title' => $title,
+                    ':lang' => $lang,
+                    ':content' => $content,
+                    ':updated' => $now,
+                    ':slug' => $active_slug
+                ]);
                 
-                // Add categories
-                if (!empty($parsed['metadata']['categories'])) {
-                    foreach ($parsed['metadata']['categories'] as $cat_name) {
-                        $cat_id = get_or_create_category($cat_name);
-                        if ($cat_id) {
-                            $stmt_link = $db->prepare("INSERT INTO topic_categories (topic_id, category_id) VALUES (:topic_id, :category_id)");
-                            $stmt_link->execute([':topic_id' => $topic_id, ':category_id' => $cat_id]);
-                        }
+                // Remove old category links
+                $stmt_del = $db->prepare("DELETE FROM topic_categories WHERE topic_id = :topic_id");
+                $stmt_del->execute([':topic_id' => $topic_id]);
+            }
+            
+            // Sync categories
+            if (!empty($parsed['metadata']['categories'])) {
+                foreach ($parsed['metadata']['categories'] as $cat_name) {
+                    $cat_id = get_or_create_category($cat_name);
+                    if ($cat_id) {
+                        $stmt_link = $db->prepare("INSERT INTO topic_categories (topic_id, category_id) VALUES (:topic_id, :category_id)");
+                        $stmt_link->execute([':topic_id' => $topic_id, ':category_id' => $cat_id]);
                     }
                 }
             }
-        } else {
-            // File exists in DB, check if it's newer than database record
-            $db_topic = $db_topics[$slug];
-            $db_updated = strtotime($db_topic['updated_at']);
-            if ($file_mtime > $db_updated + 2) {
-                $parsed = parse_topic_file($file);
-                if ($parsed) {
-                    $lang = preg_match('/\p{Arabic}/u', $slug) ? 'ar' : 'en';
-                    $stmt_update = $db->prepare("UPDATE topics SET title = :title, lang = :lang, content = :content, updated_at = :updated WHERE slug = :slug");
-                    $stmt_update->execute([
-                        ':title' => $slug,
-                        ':lang' => $lang,
-                        ':content' => $parsed['markdown'],
-                        ':updated' => date('Y-m-d H:i:s', $file_mtime),
-                        ':slug' => $slug
-                    ]);
-                    
-                    $topic_id = $db_topic['id'];
-                    
-                    // Sync categories
-                    $stmt_del = $db->prepare("DELETE FROM topic_categories WHERE topic_id = :topic_id");
-                    $stmt_del->execute([':topic_id' => $topic_id]);
-                    
-                    if (!empty($parsed['metadata']['categories'])) {
-                        foreach ($parsed['metadata']['categories'] as $cat_name) {
-                            $cat_id = get_or_create_category($cat_name);
-                            if ($cat_id) {
-                                $stmt_link = $db->prepare("INSERT INTO topic_categories (topic_id, category_id) VALUES (:topic_id, :category_id)");
-                                $stmt_link->execute([':topic_id' => $topic_id, ':category_id' => $cat_id]);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    // 3. If a record exists in DB but file doesn't exist on disk, recreate the file!
-    foreach ($db_topics as $slug => $db_topic) {
-        if (!in_array($slug, $file_slugs)) {
-            $stmt_content = $db->prepare("SELECT id, title, lang, content, created_at FROM topics WHERE slug = :slug");
-            $stmt_content->execute([':slug' => $slug]);
-            $row = $stmt_content->fetch();
-            if ($row) {
-                $topic_id = $row['id'];
-                
-                // Fetch categories
-                $stmt_cats = $db->prepare("SELECT c.name FROM categories c JOIN topic_categories tc ON c.id = tc.category_id WHERE tc.topic_id = :topic_id");
-                $stmt_cats->execute([':topic_id' => $topic_id]);
-                $cat_names = [];
-                while ($cat_row = $stmt_cats->fetch()) {
-                    $cat_names[] = $cat_row['name'];
-                }
-                
-                $filepath = TOPICS_DIR . '/' . $slug . '.md';
-                $file_content = "---\n";
-                $file_content .= "title: " . $row['title'] . "\n";
-                $file_content .= "lang: " . $row['lang'] . "\n";
-                $file_content .= "date: " . $row['created_at'] . "\n";
-                if (!empty($cat_names)) {
-                    $file_content .= "categories: " . implode(', ', $cat_names) . "\n";
-                }
-                $file_content .= "---\n";
-                $file_content .= $row['content'];
-                file_put_contents($filepath, $file_content);
-            }
+            
+            // Delete the file after it has been synced
+            unlink($file);
         }
     }
 }
@@ -386,41 +424,6 @@ function get_topic($slug) {
             'markdown' => $row['content']
         ];
     }
-    
-    // Fallback: If not in DB but file exists, parse and save to DB
-    $filepath = TOPICS_DIR . '/' . $slug . '.md';
-    if (file_exists($filepath)) {
-        $parsed = parse_topic_file($filepath);
-        if ($parsed) {
-            $lang = preg_match('/\p{Arabic}/u', $slug) ? 'ar' : 'en';
-            // Save to DB
-            $stmt_insert = $db->prepare("INSERT INTO topics (slug, title, lang, content, created_at, updated_at) VALUES (:slug, :title, :lang, :content, :created, :updated)");
-            $stmt_insert->execute([
-                ':slug' => $slug,
-                ':title' => $slug,
-                ':lang' => $lang,
-                ':content' => $parsed['markdown'],
-                ':created' => $parsed['metadata']['date'],
-                ':updated' => date('Y-m-d H:i:s')
-            ]);
-            $topic_id = $db->lastInsertId();
-            
-            // Add categories
-            if (!empty($parsed['metadata']['categories'])) {
-                foreach ($parsed['metadata']['categories'] as $cat_name) {
-                    $cat_id = get_or_create_category($cat_name);
-                    if ($cat_id) {
-                        $stmt_link = $db->prepare("INSERT INTO topic_categories (topic_id, category_id) VALUES (:topic_id, :category_id)");
-                        $stmt_link->execute([':topic_id' => $topic_id, ':category_id' => $cat_id]);
-                    }
-                }
-            }
-            
-            // Refetch with categories
-            return get_topic($slug);
-        }
-    }
-    
     return null;
 }
 
@@ -431,7 +434,7 @@ function save_topic($slug, $title, $lang, $content, $category_ids = []) {
     $slug = basename($slug);
     $db = Database::connect();
     
-    $lang = $lang === 'ar' ? 'ar' : 'en';
+    $lang = $lang === 'en' ? 'en' : 'ar';
     $title = str_replace(["\n", "\r"], "", trim($title));
     $content = trim($content);
     
@@ -489,19 +492,8 @@ function save_topic($slug, $title, $lang, $content, $category_ids = []) {
         }
     }
     
-    // Save to Markdown File
-    $filepath = TOPICS_DIR . '/' . $slug . '.md';
-    $file_content = "---\n";
-    $file_content .= "title: $title\n";
-    $file_content .= "lang: $lang\n";
-    $file_content .= "date: $date\n";
-    if (!empty($cat_names)) {
-        $file_content .= "categories: " . implode(', ', $cat_names) . "\n";
-    }
-    $file_content .= "---\n";
-    $file_content .= $content;
-    
-    return file_put_contents($filepath, $file_content) !== false;
+    // Markdown files are no longer maintained on disk
+    return true;
 }
 
 /**
@@ -523,13 +515,6 @@ function delete_topic($slug) {
     // Delete from DB
     $stmt = $db->prepare("DELETE FROM topics WHERE slug = :slug");
     $stmt->execute([':slug' => $slug]);
-    
-    // Delete from Filesystem
-    $filepath = TOPICS_DIR . '/' . $slug . '.md';
-    if (file_exists($filepath)) {
-        return unlink($filepath);
-    }
-    
     return true;
 }
 
